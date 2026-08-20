@@ -1,0 +1,11 @@
+{
+  "//": "Build tooling: the Vite config and the dev API plugin it loads.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"]
+  },
+  "include": ["vite.config.ts", "vitest.config.ts", "tools"]
+}

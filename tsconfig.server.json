@@ -1,0 +1,25 @@
+{
+  "//": [
+    "The SERVERLESS project. moduleResolution `nodenext` REJECTS extensionless",
+    "relative imports (TS2835), which is what turns tech spec 2's '.js specifiers",
+    "under api/ and lib/' from a convention into a compile error.",
+    "",
+    "No `paths` on purpose: Vercel does not support path mappings when it bundles",
+    "api/*.ts, so an @/ import would typecheck locally and fail in production.",
+    "Omitting it here makes that a compile error instead.",
+    "",
+    "package.json's \"type\": \"module\" is what makes nodenext treat these .ts files",
+    "as ESM, and is the same fact that makes Vercel emit ESM functions. Do not",
+    "remove it."
+  ],
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+    "resolveJsonModule": true
+  },
+  "include": ["api", "lib", "domain"],
+  "exclude": ["**/*.test.ts"]
+}

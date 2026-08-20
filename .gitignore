@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.vercel/
+
+# Secrets — never commit. See .env.local.example for the template.
+.env
+.env.local
+.env.*.local
+
+# Local dev fallbacks for Neon and R2 (see lib/server/db.ts, lib/server/blob.ts)
+.dev-data/
+.dev-blobs/
+
+# Tooling
+node_modules/.tmp/
+*.tsbuildinfo
+.DS_Store
+Thumbs.db

@@ -1,0 +1,119 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+ * Score-colour safelist.
+ *
+ * Tailwind never executes your JavaScript -- its extractor reads source files
+ * as plain text and harvests candidate substrings, so `bg-score-${key}` yields
+ * only the useless candidate "bg-score-" and the utility is never generated.
+ * utils/scoreColor.ts therefore writes every class out literally, and this
+ * safelist is the second line of defence required by tech spec §8: it survives
+ * a refactor to template literals and covers the fill-/stroke- utilities used
+ * inside inline SVG.
+ *
+ * Tokens are named m5..p5 rather than -5..+5 so no class name contains a bare
+ * leading dash, which would collide with Tailwind's negative-value syntax.
+ * --------------------------------------------------------------------------- */
+@source inline("{bg,text,border,ring,fill,stroke}-score-{m5,m4,m3,m2,m1,z0,p1,p2,p3,p4,p5}");
+@source inline("{bg,text,border,ring,fill,stroke}-score-{m5,m4,m3,m2,m1,z0,p1,p2,p3,p4,p5}-ink");
+@source inline("{bg,text,border}-score-{m5,m4,m3,m2,m1,z0,p1,p2,p3,p4,p5}-soft");
+
+@theme {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* The score ramp: the single source of truth for score colour.
+   * Three tiers per stop, because one colour cannot do three jobs:
+   *   mark -- vivid, for chart marks and rails
+   *   ink  -- >=4.5:1 on white, for text; contrast is symmetric, so ink also
+   *           works as a background under white text
+   *   soft -- 50-level tint, for chips, with ink text on top
+   * The mark tier is monotonic in lightness away from 0, so magnitude survives
+   * red-green colour-vision deficiency. utils/scoreColor.ts mirrors these hex
+   * values for Recharts, and a Vitest guard asserts the two never drift.
+   */
+  --color-score-m5: #7f1d1d;
+  --color-score-m5-ink: #7f1d1d;
+  --color-score-m5-soft: #fef2f2;
+  --color-score-m4: #a4161a;
+  --color-score-m4-ink: #991b1b;
+  --color-score-m4-soft: #fef2f2;
+  --color-score-m3: #cc2936;
+  --color-score-m3-ink: #b42318;
+  --color-score-m3-soft: #fef2f2;
+  --color-score-m2: #e8590c;
+  --color-score-m2-ink: #9a3412;
+  --color-score-m2-soft: #fff7ed;
+  --color-score-m1: #f59f00;
+  --color-score-m1-ink: #a16207;
+  --color-score-m1-soft: #fefce8;
+  --color-score-z0: #94a3b8;
+  --color-score-z0-ink: #475569;
+  --color-score-z0-soft: #f8fafc;
+  --color-score-p1: #85c227;
+  --color-score-p1-ink: #4d7c0f;
+  --color-score-p1-soft: #f7fee7;
+  --color-score-p2: #4caf50;
+  --color-score-p2-ink: #15803d;
+  --color-score-p2-soft: #f0fdf4;
+  --color-score-p3: #2e9e4f;
+  --color-score-p3-ink: #166534;
+  --color-score-p3-soft: #f0fdf4;
+  --color-score-p4: #1b7f42;
+  --color-score-p4-ink: #14532d;
+  --color-score-p4-soft: #ecfdf5;
+  --color-score-p5: #0f5132;
+  --color-score-p5-ink: #0b3d21;
+  --color-score-p5-soft: #ecfdf5;
+
+  --radius-card: 0.875rem;
+  --text-hero: 3rem;
+  --text-hero--line-height: 1;
+}
+
+@layer base {
+  html {
+    /* Light-only UI: stop iOS Safari from auto-darkening it. */
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+    /* No pull-to-refresh: it would discard a review draft mid-edit. */
+    overscroll-behavior-y: none;
+  }
+
+  /* 16px floor. Anything smaller triggers iOS Safari's zoom-on-focus, which is
+   * the single worst one-handed regression on this app. */
+  input,
+  select,
+  textarea,
+  button {
+    font-size: max(1rem, 100%);
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-slate-900 ring-offset-2 ring-offset-white;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}
+
+/* Home-indicator-safe padding, used by the bottom nav and every sticky action bar. */
+@utility pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* WCAG 2.5.5 hit area without changing the visual size of the control. */
+@utility tap {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}

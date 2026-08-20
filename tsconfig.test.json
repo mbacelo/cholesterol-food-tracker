@@ -1,0 +1,21 @@
+{
+  "//": [
+    "Test project. Suites import { describe, it, expect } from 'vitest' explicitly",
+    "rather than relying on globals, because TypeScript 7 defaults `types` to []",
+    "and globals would silently disappear.",
+    "",
+    "`bundler` resolution here so a single suite can import both halves: a domain",
+    "module via ./x.js and a browser util extensionless."
+  ],
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "paths": { "@/*": ["./*"] }
+  },
+  "include": ["**/*.test.ts", "**/*.test.tsx"],
+  "exclude": ["node_modules", "dist"]
+}

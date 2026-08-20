@@ -1,0 +1,31 @@
+// Strictness shared by every project. Module settings differ per half and live
+// in the leaf configs.
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "erasableSyntaxOnly": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Worth the friction: req.query.id and process.env.X are exactly the places
+    // where an undefined slips through into SQL.
+    "noUncheckedIndexedAccess": true,
+
+    // exactOptionalPropertyTypes is deliberately OFF: it fights Zod-inferred
+    // optional fields for no security gain.
+
+    // TypeScript 7 defaults `types` to [], so each leaf project declares what it
+    // needs. That is also what keeps domain/ pure -- under the browser project it
+    // sees neither node nor DOM globals.
+    "types": []
+  }
+}

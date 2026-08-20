@@ -1,0 +1,39 @@
+// The BROWSER project, and deliberately the ROOT config -- this is the file
+// editors and Vercel read. Vercel supports neither `paths` nor project
+// references and reads the root tsconfig when it compiles api/*.ts, so a
+// solution-style root with `references` would be the wrong shape here. It
+// ignores `paths` harmlessly, because no server file may use the @/ alias:
+// tsconfig.server.json omits `paths`, which turns that rule into a compile
+// error rather than a convention.
+//
+// moduleResolution `bundler` is the lever that lets both halves typecheck. It
+// accepts extensionless relative imports AND substitutes ./foo.js -> foo.ts, so
+// domain/ can carry the .js specifiers the server half requires while still
+// being imported from the browser half.
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+
+    // No baseUrl: it is a hard error in TypeScript 7. `paths` resolve relative
+    // to this file, so ./* is the repo root. Mirrored in vite.config.ts, because
+    // tsc and Vite resolve independently of each other.
+    "paths": { "@/*": ["./*"] }
+  },
+  "include": [
+    "main.tsx",
+    "App.tsx",
+    "vite-env.d.ts",
+    "routes",
+    "components",
+    "context",
+    "hooks",
+    "utils",
+    "domain"
+  ],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"]
+}
