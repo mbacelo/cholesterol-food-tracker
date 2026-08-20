@@ -112,10 +112,21 @@
   padding-top: env(safe-area-inset-top);
 }
 
-/* WCAG 2.5.5 hit area without changing the visual size of the control. */
+/* WCAG 2.5.5 hit area without changing the visual size of the control.
+ *
+ * Also the one place the pointer cursor is set. Every action element in the app
+ * carries `tap`, and a <button> defaults to `cursor: default` while an <a>
+ * defaults to `pointer` -- so without this, links looked clickable and buttons
+ * (the back arrows, the CSV export, "Cerrar sesion") did not.
+ */
 @utility tap {
   min-height: 2.75rem;
   min-width: 2.75rem;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
 }
 
 /* The analysing state on the Log screen.

@@ -109,7 +109,7 @@ export default function History() {
             type="button"
             onClick={() => setInput('')}
             aria-label="Limpiar búsqueda"
-            className="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded text-slate-500"
+            className="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 cursor-pointer place-items-center rounded text-slate-500"
           >
             <X className="size-4" aria-hidden="true" />
           </button>

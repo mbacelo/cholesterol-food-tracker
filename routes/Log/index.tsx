@@ -503,7 +503,7 @@ function FilePicker({
   onPick: (file: File | undefined) => void
 }) {
   return (
-    <label className="tap flex w-full cursor-pointer items-center justify-center gap-2 rounded-card bg-slate-900 px-4 font-semibold text-white">
+    <label className="tap flex w-full items-center justify-center gap-2 rounded-card bg-slate-900 px-4 font-semibold text-white">
       <Icon className="size-5" aria-hidden="true" />
       {label}
       <input
