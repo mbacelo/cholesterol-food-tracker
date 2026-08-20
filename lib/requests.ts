@@ -30,7 +30,21 @@ export const zDescription = z.string().trim().min(1).max(200)
 
 export const zUuid = z.string().uuid()
 
-export const zEmail = z.string().trim().toLowerCase().email().max(320)
+/**
+ * A deliberately permissive email check.
+ *
+ * Zod's `.email()` rejects `debug@localhost` for having no TLD, which would make
+ * the admin screens unusable in debug mode -- and strict RFC validation buys
+ * nothing here: the only addresses that ever authenticate come from Google
+ * already verified, and an administrator typing a malformed address onto the
+ * allowlist simply never matches a login.
+ */
+export const zEmail = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(320)
+  .regex(/^[^\s@]+@[^\s@]+$/, 'must look like an email address')
 
 /**
  * An image on the wire.
@@ -60,6 +74,9 @@ export const zAnalyze = z
     description: zDescription.optional(),
     is_homemade: z.boolean(),
     image: zImage.optional(),
+    // Nothing is dated by this endpoint; the offset is used only so the durable
+    // daily budget resets at the caller's own midnight.
+    tz_offset_minutes: zTzOffset.optional(),
   })
   .strict()
   .refine(

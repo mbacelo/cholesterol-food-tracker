@@ -26,6 +26,7 @@ import type { ApiHandler, ApiRequest, ApiResponse } from '../lib/server/http.js'
 export const SERVER_ENV_KEYS = [
   'AI_PROVIDER',
   'AI_MODEL',
+  'AI_EFFORT',
   'ANTHROPIC_API_KEY',
   'OPENAI_API_KEY',
   'DATABASE_URL',

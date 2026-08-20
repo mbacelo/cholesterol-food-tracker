@@ -23,6 +23,35 @@ const DEFAULT_MODEL = 'claude-opus-5'
  */
 const MAX_TOKENS = 16_000
 
+/**
+ * Reasoning depth, and the main latency lever.
+ *
+ * Functional spec §1 asks for "photo, confirm, done, in a few seconds". Measured
+ * on this rubric, one uncached analysis takes roughly:
+ *
+ *     high (the API default) ~17s     medium ~11s     low ~6s
+ *
+ * `low` is the default here because the quality did not visibly suffer: at `low`
+ * the model still infers a chivito's unnamed panceta, jamón, muzzarella and
+ * mayonesa from the dish name alone, applies the bought-food assumption, and
+ * answers in the description's language. The rubric is mechanical accumulation
+ * against an explicit list rather than open-ended reasoning, so depth buys much
+ * less here than it costs.
+ *
+ * Raise it with AI_EFFORT where scoring unusual dishes matters more than speed.
+ * Either way, a repeat is a cache hit at ~0.1s.
+ */
+const DEFAULT_EFFORT = 'low'
+const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'] as const
+type Effort = (typeof EFFORT_LEVELS)[number]
+
+function effort(): Effort {
+  const raw = process.env.AI_EFFORT
+  return (EFFORT_LEVELS as readonly string[]).includes(raw ?? '')
+    ? (raw as Effort)
+    : DEFAULT_EFFORT
+}
+
 let client: Anthropic | undefined
 
 export function anthropicProvider(): AIProvider {
@@ -45,6 +74,7 @@ export function anthropicProvider(): AIProvider {
         // strict mode is a strong hint, not a guarantee we should build on.
         output_config: {
           format: { type: 'json_schema', schema: ANALYSIS_JSON_SCHEMA },
+          effort: effort(),
         },
         messages: [{ role: 'user', content: buildContent(request) }],
       })
