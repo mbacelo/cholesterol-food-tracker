@@ -1,0 +1,37 @@
+{
+  "id": "/",
+  "name": "Cholesterol Food Tracker",
+  "short_name": "Cholesterol",
+  "description": "Log a dish, see its likely effect on your LDL, and track it against your goal.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#ffffff",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "health",
+    "lifestyle"
+  ],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Log a dish",
+      "short_name": "Log",
+      "url": "/log"
+    },
+    {
+      "name": "Dashboard",
+      "url": "/dashboard"
+    }
+  ]
+}

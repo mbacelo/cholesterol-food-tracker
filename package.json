@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run",
     "audit": "node scripts/audit-isolation.mjs",
-    "verify": "npm run typecheck && npm test && npm run audit"
+    "verify": "npm run typecheck && npm test && npm run audit",
+    "generate:icons": "npx --yes @vite-pwa/assets-generator --preset minimal-2023 public/icon.svg"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.119.0",

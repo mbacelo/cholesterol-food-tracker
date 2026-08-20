@@ -1,47 +1,115 @@
-import { SCORE_CLASSES, formatScore, scoreKey } from '@/utils/scoreColor'
+import { Suspense, lazy } from 'react'
+import { Navigate, Route, Routes, useLocation } from 'react-router'
+import { SessionProvider, useSession } from '@/context/SessionContext'
+import { AppShell } from '@/components/shell'
+import { ErrorState, Spinner } from '@/components/ui'
+import Today from '@/routes/Today'
+import Log from '@/routes/Log/index'
+import History from '@/routes/History'
+import EntryDetail from '@/routes/EntryDetail'
+import Me from '@/routes/Me'
+import Rubric from '@/routes/Rubric'
+import Login, { NotAuthorized } from '@/routes/Login'
+import { AdminLayout, AdminPrompts, AdminUsers } from '@/routes/admin/Admin'
 
-const SCORES = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
+// Recharts is ~400 KB of the bundle and only the dashboard needs it. Splitting it
+// out keeps the logging path -- the one that has to feel instant -- small.
+const Dashboard = lazy(() => import('@/routes/Dashboard'))
 
 /**
- * Temporary scaffold screen.
- *
- * It exists to prove the Tailwind v4 setup end to end: every score class is
- * generated in a PRODUCTION build (where an interpolated class name would be
- * purged and render transparent). The real route tree replaces this in the
- * screens step of the build order.
+ * The route tree. react-router v7 declarative mode: BrowserRouter plus
+ * Routes/Route, with no data router -- every screen is authenticated and
+ * interactive, so loaders buy nothing here.
  */
+
+/**
+ * The session gate.
+ *
+ * `loading` renders a spinner rather than redirecting, so there is no flash of
+ * the login screen for a signed-in user. A bootstrap network failure renders an
+ * error with a retry, NOT a redirect to login: a flaky tunnel must not look like
+ * a sign-out.
+ */
+function RequireSession() {
+  const { state, retry } = useSession()
+  const location = useLocation()
+
+  switch (state.status) {
+    case 'loading':
+      return (
+        <div className="grid min-h-dvh place-items-center">
+          <Spinner label="Loading your account" />
+        </div>
+      )
+    case 'anonymous':
+      return <Navigate to="/login" replace state={{ next: location.pathname }} />
+    case 'not_authorized':
+      return <Navigate to="/not-authorized" replace />
+    case 'error':
+      return (
+        <div className="mx-auto max-w-sm px-6 py-16">
+          <ErrorState message={state.message} onRetry={retry} />
+        </div>
+      )
+    default:
+      return <AppShell />
+  }
+}
+
+/**
+ * The admin gate.
+ *
+ * Needs no loading branch: the probe resolves as part of the same bootstrap as
+ * the session, so `isAdmin` is already a settled boolean here. A non-admin is
+ * bounced to Me rather than shown an error, because not being an administrator is
+ * the ordinary case.
+ */
+function RequireAdmin() {
+  const { state } = useSession()
+  if (state.status !== 'ready') return null
+  if (!state.isAdmin) return <Navigate to="/me" replace />
+  return <AdminLayout />
+}
+
 export default function App() {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
-      <h1 className="text-2xl font-bold">Cholesterol Food Tracker</h1>
-      <p className="mt-1 text-sm text-slate-600">
-        Scaffold check: the score ramp below must render in colour in a production build.
-      </p>
+    <SessionProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/not-authorized" element={<NotAuthorized />} />
 
-      <section aria-labelledby="ramp" className="mt-6">
-        <h2 id="ramp" className="text-sm font-semibold text-slate-700">
-          Score ramp
-        </h2>
-        <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {SCORES.map((score) => {
-            const c = SCORE_CLASSES[scoreKey(score)]
-            return (
-              <li
-                key={score}
-                className={`flex items-center gap-3 rounded-card border p-2 ${c.softBg} ${c.border}`}
+        <Route element={<RequireSession />}>
+          <Route index element={<Navigate to="/today" replace />} />
+          <Route path="today" element={<Today />} />
+          <Route path="log" element={<Log />} />
+          <Route path="history" element={<History />} />
+          <Route path="entry/:id" element={<EntryDetail />} />
+          <Route
+            path="dashboard"
+            element={
+              <Suspense
+                fallback={
+                  <div className="grid min-h-64 place-items-center">
+                    <Spinner label="Loading charts" />
+                  </div>
+                }
               >
-                <span
-                  className={`tap flex items-center justify-center rounded-lg px-3 font-bold ${c.solidBg} ${c.onSolid}`}
-                >
-                  {formatScore(score)}
-                </span>
-                <span className={`text-sm font-semibold ${c.text}`}>{formatScore(score)}</span>
-                <span className={`ml-auto h-6 w-6 rounded ${c.mark}`} aria-hidden="true" />
-              </li>
-            )
-          })}
-        </ul>
-      </section>
-    </main>
+                <Dashboard />
+              </Suspense>
+            }
+          />
+          <Route path="me" element={<Me />} />
+          <Route path="rubric" element={<Rubric />} />
+
+          <Route path="admin" element={<RequireAdmin />}>
+            <Route index element={<Navigate to="/admin/users" replace />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="prompts" element={<AdminPrompts />} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/today" replace />} />
+        </Route>
+      </Routes>
+    </SessionProvider>
   )
 }
