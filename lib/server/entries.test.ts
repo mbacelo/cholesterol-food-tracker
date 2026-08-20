@@ -4,7 +4,6 @@ import {
   createEntry,
   deleteEntry,
   getEntry,
-  getEntryImageKey,
   listEntries,
   listEntriesForDate,
   needsRescore,
@@ -117,11 +116,6 @@ describe('DATA ISOLATION: one user can never reach another user’s entry', () =
     await expect(getEntry(aliceId, entry.id)).resolves.toMatchObject({ id: entry.id })
   })
 
-  it('getEntryImageKey with another user’s id is a 404', async () => {
-    const entry = await makeEntry(aliceId, ALICE.email, 'Lentil soup')
-    await expect(getEntryImageKey(bobId, entry.id)).rejects.toMatchObject({ status: 404 })
-  })
-
   it('lists never include another user’s entries', async () => {
     await makeEntry(aliceId, ALICE.email, 'Alice lentils')
     await makeEntry(bobId, BOB.email, 'Bob bacon sandwich')
@@ -139,11 +133,24 @@ describe('DATA ISOLATION: one user can never reach another user’s entry', () =
   })
 })
 
-describe('entries never expose the image key', () => {
-  it('returns has_image instead of image_key', async () => {
+describe('the row-to-response boundary', () => {
+  // toPublic() is the only way a food_entries row reaches a response. A column
+  // added to the table later must be added to EntryPublic before it can escape,
+  // and user_id must never escape at all.
+  it('exposes exactly the public fields', async () => {
     const entry = await makeEntry(aliceId, ALICE.email, 'Lentil soup')
-    expect(entry).not.toHaveProperty('image_key')
-    expect(entry.has_image).toBe(false)
+    expect(Object.keys(entry).sort()).toEqual([
+      'created_at',
+      'description',
+      'entry_date',
+      'id',
+      'is_homemade',
+      'negative_factors',
+      'positive_factors',
+      'rationale',
+      'score',
+      'updated_at',
+    ])
   })
 })
 

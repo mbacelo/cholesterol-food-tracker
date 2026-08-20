@@ -31,12 +31,12 @@ Defines **what** the app does. `tech-spec.md` defines **how** it is built.
 | Role | Capabilities |
 |---|---|
 | **User** | Create, view, edit, delete their own entries. Their own dashboard and goal. |
-| **Administrator** | Manage the list of authorized users. Edit the AI prompts. **Cannot see any user's entries, images, scores or dashboard.** |
+| **Administrator** | Manage the list of authorized users. Edit the AI prompts. **Cannot see any user's entries, scores or dashboard.** |
 
 - **Login is Google only.** No local passwords, no sign-up form.
 - **Access is by invitation.** The administrator maintains an allowlist of email addresses. A Google account not on it is refused with a clear "not authorized" message.
 - The account is provisioned on first successful login. Blocking or removing an email blocks further access immediately, including sessions already open.
-- **Data isolation is absolute.** No user, including the administrator, can see another person's data. Deleting a user destroys their entries and images.
+- **Data isolation is absolute.** No user, including the administrator, can see another person's data. Deleting a user destroys their entries.
 
 ### 2.1 Local debug mode
 
@@ -61,7 +61,7 @@ The only record in the application. One entry is one dish eaten on one date.
 | `rationale` | text | yes | no | Why it scored what it scored, naming specific ingredients. 1 to 3 sentences. |
 | `positive_factors` | list of `{label, reason}` | no | no | Ingredients or preparations that improved the score. |
 | `negative_factors` | list of `{label, reason}` | no | no | Ingredients or preparations that worsened the score. |
-| `image` | file reference | no | no | The uploaded photo, if any. |
+| ~~`image`~~ | — | — | — | **Not stored.** A photo is input to the analysis and nothing else: it is shown while the Log flow is open and discarded on save. *(Reconciliation, v1.3.)* |
 
 Deliberately minimal: **what it was, when, whether it was homemade, what it scored.**
 
@@ -212,7 +212,7 @@ Mobile-first. Five destinations in a persistent bottom navigation bar.
 ### 6.1 Logging (primary path)
 
 1. The user taps **Log** and chooses **Take photo** (opens the camera directly), **Choose from gallery**, or **Type it**.
-2. A photo is compressed on the device and uploaded with a visible progress state.
+2. A photo is compressed on the device and sent for analysis with a visible progress state. It is never stored — the description it produces is the record, and the review screen says so.
 3. The app analyzes it and shows the **review screen**:
    - Proposed description (editable; on the typed path, the user's own text verbatim)
    - Homemade checkbox (editable, defaults to true)
@@ -225,7 +225,7 @@ Mobile-first. Five destinations in a persistent bottom navigation bar.
 
 - Editing the description or the homemade checkbox on the review screen requires a **re-score before saving**: the stale score stays visible and marked as stale, Save is blocked, and the re-score runs **on demand** when the user taps it. Scoring is never triggered by typing, by a blur or by a timer -- a keystroke must never be able to spend money. *(Reconciliation, v1.2: an earlier build re-scored on a debounced pause in typing, which charged for every intermediate phrase.)*
 - The score and rationale are never directly editable. If the user disagrees, the remedy is to correct the description.
-- If the AI cannot identify food in the image, the app says so and asks the user to type a description, keeping the photo attached.
+- If the AI cannot identify food in the image, the app says so and asks the user to type a description. The photo stays on screen as a reference while they do.
 - If the user *types* something that is not a dish ("asdf"), the entry is still scorable: it scores **0** with a rationale saying the text does not describe a recognisable dish. Asking someone who just typed to "type a description" would be a loop. *(Reconciliation, v1.1: v1 defined this fallback only for images.)*
 - If analysis fails, the user sees a clear error and a retry action. Nothing is ever saved without a score.
 - A page refresh during review must not force a second paid analysis: the in-progress capture and its result survive a reload.
@@ -274,7 +274,7 @@ Given an image and/or a description, plus the homemade flag, one analysis return
 
 ### 6.4 Viewing, editing, deleting
 
-- Tapping an entry opens its **detail view**: photo, description, homemade indicator, date, score with color, rationale, factor chips.
+- Tapping an entry opens its **detail view**: description, homemade indicator, date, score with color, rationale, factor chips.
 - **Edit** changes the date, the description and the homemade checkbox. Nothing else.
 - Editing the description or the homemade checkbox **re-scores automatically**. The user sees the new result and can confirm or cancel, but cannot alter it. Changing only the date does not re-score.
 - **Delete** requires a confirmation.
@@ -282,7 +282,7 @@ Given an image and/or a description, plus the homemade flag, one analysis return
 ### 6.5 Today
 
 - Header: today's date, the number of entries, and the **daily average** as a large signed number in its scale color, with a clear indicator of whether it meets `daily_average_target`.
-- Entries in the order logged, each with a thumbnail, the description, the signed score in its color, and an icon distinguishing homemade from bought.
+- Entries in the order logged, each with the description, the signed score in its color, and an icon distinguishing homemade from bought.
 - An empty state inviting the first log of the day. Incomplete days are labeled as such rather than shown as pass or fail.
 
 ### 6.6 History
@@ -332,7 +332,7 @@ Visible only to administrators. Contains no food data of any kind.
 - View the allowlist. Each row shows the email, whether it is blocked, and whether that person has ever signed in.
 - Add an email. Block or unblock one, which takes effect immediately. Remove one.
 - Delete a user and all their data. The confirmation states how many entries will be destroyed **without displaying any of their content**.
-- No screen exposes descriptions, images, scores or dashboards.
+- No screen exposes descriptions, scores or dashboards.
 
 **Prompts**
 
@@ -344,8 +344,8 @@ Visible only to administrators. Contains no food data of any kind.
 
 - **Mobile-first responsive design**, usable one-handed on a phone in portrait, with a usable desktop layout.
 - **Dates are the user's local dates.** "Today" is today where the user is, not where the server is.
-- **Image handling:** photos are resized and compressed on the device before upload, to a few hundred kilobytes, never more than a few megabytes. The original full-resolution file is never uploaded. Compression must preserve enough detail for the AI to identify the dish.
-- **Privacy:** photos and food data are private to the user, never used for any purpose the user has not agreed to, and fully deleted when the user is deleted.
+- **Image handling:** photos are resized and compressed on the device before being sent, to a few hundred kilobytes, never more than a few megabytes. The original full-resolution file is never sent. Compression must preserve enough detail for the AI to identify the dish.
+- **Privacy:** food data is private to the user, never used for any purpose the user has not agreed to, and fully deleted when the user is deleted. Photos are never stored at all, so there is no photo archive to protect, export or leak.
 - **Offline:** logging needs the model, so an offline state is shown clearly rather than queued.
 
 ---
@@ -354,7 +354,7 @@ Visible only to administrators. Contains no food data of any kind.
 
 1. Only allowlisted email addresses can log in, and only through Google.
 2. `date` may never be in the user's future.
-3. An entry always has a date, a description, a homemade flag and a score. The image is optional.
+3. An entry always has a date, a description, a homemade flag and a score. Those four are the whole record; a photo is a way of producing the description, not part of it.
 4. The score is always a single integer -5..+5. There is no separate category field.
 5. The score, rationale and factor lists are read-only for the user, always. The AI proposes a score; **the application computes the stored integer** from the model's unclamped modifier total and its booleans (§4.2, §6.3).
 6. Editing a description or a homemade flag always triggers a re-score. Editing only the date does not.
@@ -383,7 +383,7 @@ Visible only to administrators. Contains no food data of any kind.
 - [ ] A dish can be logged from a phone camera photo in a few seconds on the happy path, and from a gallery image or typed text.
 - [ ] The photo path performs one analysis, not two.
 - [ ] Editing the description or homemade checkbox on the review screen blocks Save until the user taps re-score; typing alone never calls the model.
-- [ ] A photo the AI cannot identify falls back to typed description without losing the photo.
+- [ ] A photo the AI cannot identify falls back to typed description, with the photo still on screen.
 - [ ] The date defaults to the user's local today, accepts any past date, and rejects future dates.
 - [ ] Every saved entry has an integer score in -5..+5 and a non-empty rationale naming specific ingredients, plus distinct positive and negative factor items.
 - [ ] **No interface anywhere in the app** lets a user type, pick or otherwise alter a score or rationale.
@@ -414,13 +414,13 @@ Visible only to administrators. Contains no food data of any kind.
 
 - [ ] An administrator can add, block, unblock and remove allowlisted emails.
 - [ ] An administrator can delete a user and all their data without seeing any of its content.
-- [ ] No administration screen displays any food description, image, score or dashboard.
+- [ ] No administration screen displays any food description, score or dashboard.
 - [ ] Both prompts can be edited and reverted, and saving one changes no existing entry's score.
 
 **Quality**
 
 - [ ] Fully usable one-handed on a phone in portrait.
-- [ ] Uploaded images are compressed on the device and stored at a few hundred kilobytes each.
+- [ ] Photos are compressed on the device to a few hundred kilobytes before being sent, and no photo is stored anywhere after the Log flow ends.
 - [ ] All entries export to CSV.
 
 **Debug mode**
@@ -431,7 +431,7 @@ Visible only to administrators. Contains no food data of any kind.
 
 ---
 
-## 9. Changes in v1.1 (reconciliation with the implementation)
+## 9. Changes since v1 (reconciliation with the implementation)
 
 Every item below is a case where building the app showed v1 to be wrong,
 ambiguous, or impossible as written. Nothing here is a change of intent.
@@ -446,6 +446,7 @@ ambiguous, or impossible as written. Nothing here is a change of intent.
 | 6.7 | Days on target is out of **complete** days; period average is the mean of complete days' daily averages | v1 said "logged days", contradicting §4.4 and rule 9; the period average was undefined |
 | 7.5 | Reworded: the application computes the stored score | Makes explicit that the model's number is an input, not the answer |
 | 7.9 | Incomplete days are excluded from the period average too, but their entries still count in the distribution | v1 left the distribution's treatment implicit |
+| 3.1 / 6.4 / 6.5 | **Photos are no longer stored** (v1.3). The photo is input to the analysis, is visible through the Log flow, and is discarded on save or discard. No thumbnail on the entry row, no photo on the detail screen | Reviewing the built app, the archive was the one feature that added cost and risk without changing an answer: the description is what gets scored, and every screen reads the same with or without the picture. Storing it cost an object store, four secrets, a presigned-URL endpoint, two deletion paths and a Vercel function slot — and it meant keeping a growing record of photographs of someone's meals |
 
 ### Two behaviours worth recording, which the spec did not anticipate
 

@@ -14,7 +14,6 @@ export interface Entry {
   rationale: string
   positive_factors: Factor[]
   negative_factors: Factor[]
-  has_image: boolean
   created_at: string
   updated_at: string
 }

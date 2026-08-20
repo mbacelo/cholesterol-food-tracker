@@ -34,7 +34,6 @@ Everything else falls back:
 | Service | Without credentials |
 |---|---|
 | Neon Postgres | PGlite in-process, persisted to `.dev-data/`, migrations applied automatically |
-| Cloudflare R2 | files under `.dev-blobs/`, served by `/api/image` |
 | Google sign-in | skipped; you are a seeded local debug user with a persistent banner |
 | The model | `AI_PROVIDER=mock` is deterministic and free |
 
@@ -52,7 +51,7 @@ free (see `score_cache`). `AI_EFFORT` trades latency for depth — default `low`
 |---|---|
 | `npm run dev` | UI and `/api` together, real handlers in-process |
 | `npm run verify` | typecheck, tests, isolation audit — run before deploying |
-| `npm test` | 209 tests; no credentials, no network, no spend |
+| `npm test` | 208 tests; no credentials, no network, no spend |
 | `npm run build` | typecheck then production build |
 | `npm run audit` | the data-isolation audit on its own |
 | `npm run generate:icons` | regenerate PWA PNGs from `public/icon.svg` |
@@ -63,13 +62,13 @@ because the dev plugin does not run in preview. That is expected, not an outage.
 ## Deploying
 
 1. Neon project; run `db/migrations/001_init.sql` then `002_seed_prompts.sql` in
-   the SQL editor.
-2. Cloudflare R2 private bucket.
-3. Google OAuth client ID.
-4. Set every variable from `.env.local.example` in Vercel, for Production **and**
+   the SQL editor, then `003_drop_entry_image_key.sql`.
+2. Google OAuth client ID.
+3. Set every variable from `.env.local.example` in Vercel, for Production **and**
    Preview, except `DEBUG_AUTH`/`DEBUG_ADMIN` — those are ignored when deployed
-   regardless.
-5. Put your address in `ALLOWED_EMAILS` and `ADMIN_EMAILS`, sign in, then manage
+   regardless. There is no object storage to configure: photos are read by the
+   model and never stored.
+4. Put your address in `ALLOWED_EMAILS` and `ADMIN_EMAILS`, sign in, then manage
    the durable allowlist from the admin area.
 
 Set the Vercel region to match the Neon region: the HTTP driver's latency

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { ArrowLeft, ChefHat, ImageOff, Pencil, ShoppingBag, Trash2 } from 'lucide-react'
+import { ArrowLeft, ChefHat, Pencil, ShoppingBag, Trash2 } from 'lucide-react'
 import { ConfirmDialog, ErrorState, Skeleton, Spinner } from '@/components/ui'
 import { FactorLists, ScoreBadge } from '@/components/score'
 import { apiFetch, errorMessage } from '@/utils/api'
@@ -184,18 +184,6 @@ export default function EntryDetail() {
         ) : null}
       </header>
 
-      {entry.has_image ? (
-        <img
-          src={`/api/image?entry=${entry.id}`}
-          alt=""
-          className="w-full rounded-card object-cover"
-        />
-      ) : (
-        <div className="grid h-32 place-items-center rounded-card bg-slate-100">
-          <ImageOff className="size-8 text-slate-300" aria-hidden="true" />
-        </div>
-      )}
-
       <section aria-label="Puntaje" className="mt-4 rounded-card bg-white p-4">
         <div className="flex items-center gap-3">
           <ScoreBadge score={entry.score} size="xl" showIcon />
@@ -326,7 +314,7 @@ export default function EntryDetail() {
       <ConfirmDialog
         open={confirmDelete}
         title="¿Eliminar este registro?"
-        body="También se elimina la foto. Esto no se puede deshacer."
+        body="Esto no se puede deshacer."
         confirmLabel="Eliminar"
         destructive
         pending={busy}

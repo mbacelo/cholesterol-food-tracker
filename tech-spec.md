@@ -21,7 +21,6 @@ Constraints that shaped every choice: one developer, a handful of users, mobile-
 | Charts | Recharts |
 | Backend | Vercel serverless functions under `api/` |
 | Database | Neon Postgres via `@neondatabase/serverless`, raw SQL, no ORM. Locally, PGlite in-process when `DATABASE_URL` is absent |
-| Image storage | Cloudflare R2, private bucket, presigned GET URLs, via `aws4fetch` |
 | Auth | Google Identity Services, server-verified once, then an httpOnly session cookie |
 | AI | Multimodal models behind a provider interface, strict JSON schema output. **Two implemented**: Anthropic and OpenAI, plus a deterministic offline `mock` for tests |
 | Validation | Zod, shared between request bodies and AI output parsing |
@@ -35,8 +34,7 @@ A Vite SPA plus serverless functions is chosen over a full-stack framework delib
 | Service | Tier | Notes |
 |---|---|---|
 | Vercel | Hobby | Free. Non-commercial use, which a personal app is. |
-| Neon | Free | ~0.5 GB. The schema is text-only, so effectively unlimited here. |
-| Cloudflare R2 | Free | ~10 GB storage, zero egress. Verify current limits at signup. |
+| Neon | Free | ~0.5 GB. The schema is text-only and photos are never stored, so effectively unlimited here. |
 | Google OAuth | Free | — |
 | LLM provider | **Paid** | The only bill. §7 covers the four mechanisms that keep it small. |
 
@@ -48,25 +46,23 @@ A Vite SPA plus serverless functions is chosen over a full-stack framework delib
 Phone browser — React SPA, PWA, installed to home screen
   │  fetch, httpOnly session cookie
   ▼
-Vercel serverless functions  /api/*   (11 files; Vercel Hobby allows 12)
+Vercel serverless functions  /api/*   (10 files; Vercel Hobby allows 12)
   ├── session      GET rehydrate · POST sign in · DELETE sign out
   ├── analyze      POST  image and/or text → description + score  (stateless, stores nothing)
   ├── entries      GET list/day/one · POST create · PATCH · DELETE
-  ├── image        GET   → 302 to a presigned R2 URL
   ├── settings     GET · PATCH
   ├── summary      GET   → dashboard aggregates, computed in SQL
   ├── export       GET   → CSV
   └── admin/       ping (the probe) · allowlist · prompts · users
-        │                     │                    │
-        ▼                     ▼                    ▼
-   Neon Postgres        Cloudflare R2           LLM API
-   rows and text        photos, private         key stays server-side
+        │                                          │
+        ▼                                          ▼
+   Neon Postgres                              LLM API
+   rows and text -- every byte the app keeps   key stays server-side
 ```
 
 ### Security boundary
 
 - **The browser never holds the AI key and never calls the model.** All analysis goes through `/api/analyze`.
-- **The browser never holds R2 credentials.** It receives short-lived presigned URLs only.
 - **The browser never sends a score.** Scores are computed server-side and are not accepted from any request body.
 
 ### Handler skeleton
@@ -92,7 +88,7 @@ lib/server/
   entries.ts            all food_entries SQL — the isolation boundary, see §4
   prompts.ts            read/write/revert the prompts table
   scoreCache.ts         the only file with score_cache SQL; the cache key
-  blob.ts               put / signedUrl / remove — the only file that knows about R2
+  images.ts             image byte validation for /api/analyze; nothing is stored
   usage.ts              durable per-user AI budget + burst limiter + analysis log
   db.ts                 Neon client, or PGlite locally
   env.ts                isLocalEnvironment(), debugEnabled(), debugIsAdmin()
@@ -178,7 +174,6 @@ create table food_entries (
   rationale   text not null,
   positive_factors jsonb not null default '[]',  -- [{label, reason}]
   negative_factors jsonb not null default '[]',
-  image_key   text,                              -- R2 object key, never a URL
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
@@ -228,7 +223,7 @@ Enforced in application code, structured so the failure mode cannot be reached b
    ```
    A `where id = ...` without `user_id` is the entire bug class this file exists to prevent. Zero rows returned is a 404, never a silent success.
 3. **`userId` comes only from the verified session** — never from a body, query parameter or header. Handlers get it from `requireUser(req)` and pass it down. A `user_id` in a request body is ignored, and a test asserts that.
-4. **Administrators cannot reach food data.** Admin endpoints touch `food_entries` only via `count(*)` and `delete`. No admin response can carry a description, image key, score or rationale. User deletion is `delete from users where id = ...` (cascade) plus an R2 prefix delete.
+4. **Administrators cannot reach food data.** Admin endpoints touch `food_entries` only via `count(*)` and `delete`. No admin response can carry a description, score or rationale. User deletion is `delete from users where id = ...` and the cascade — one statement, with nothing outside Postgres to clean up.
 5. Because there is exactly one accessor file, the audit is a single command: `grep -rn "food_entries" api/` must return nothing.
 
 ---
@@ -265,22 +260,42 @@ A deployed build cannot satisfy this regardless of which env vars are set. When 
 
 ## 6. Images
 
-Cloudflare R2, private bucket. Objects are private by default and egress is free, which suits photos that must never be publicly reachable and are viewed repeatedly.
+**Photos are transient. Nothing is stored.** A photo is a way to *describe* a
+dish: it is compressed on the device, posted to `/api/analyze`, shown on screen
+while the Log flow is open, and discarded on save or discard. The description the
+model returns is the record.
 
-Only `lib/server/blob.ts` knows the store exists, behind `put(key, bytes, contentType)`, `signedUrl(key, ttl)` and `remove(prefix)`. Changing providers later is a one-file change.
+This is a deliberate reversal of v1, which kept every photo in a private
+Cloudflare R2 bucket. Storing them bought a thumbnail on the entry row and a
+picture on the detail screen, and cost an object-store integration, four secrets,
+a presigned-URL endpoint, two blob-deletion paths, a local-fallback store for
+development, and a growing archive of photographs of what someone eats. The
+description already carries everything the score is computed from, so the archive
+was the one part of the app that added risk without adding an answer. Removing it
+also freed a Vercel function slot, which at a ceiling of twelve is not a
+rounding error.
 
-- **Key layout:** `{user_id}/{entry_id}.jpg`. Ownership is verified in Postgres before any URL is signed, so the prefix is organizational, not a security control.
-- **Compression is client-side.** A canvas downscale to max 1280 px at JPEG quality ~0.7 yields roughly 200–400 KB while preserving enough detail to identify a dish. The original file is never uploaded. The server independently validates MIME type against an allowlist and checks decoded size against a 3.5 MB cap, with a body-parser limit of **4 MB**, because the body is buffered before any size check runs.
+What remains:
 
-> **Reconciliation (v1.1).** The 5 MB figure is unreachable: Vercel hard-caps a
-> request payload at **4.5 MB** (`413 FUNCTION_PAYLOAD_TOO_LARGE`) before a
-> handler runs. A 5 MB local limit would accept requests production rejects, so
-> both are 4 MB. The 3.5 MB decoded cap is unchanged, and is checked against the
-> **magic bytes** rather than the declared content type — a content type is only a
-> claim.
-- **Serving:** `GET /api/image?entry=<id>` authenticates, confirms the row belongs to the caller, then `302`s to a presigned URL with a 5-minute TTL. A plain `<img src>` works with no client JavaScript.
-- **Upload timing:** `/api/analyze` is stateless and stores nothing. The client keeps the compressed image and includes it in `POST /api/entries`, which writes the object and inserts the row. This sends ~300 KB twice, and in exchange there is no orphaned-object sweeper and no temporary-key lifecycle — and a discarded analysis is correct by construction, because no save path exists for it to reach accidentally.
-- **Deletion:** deleting an entry removes its object; deleting a user removes the whole `{user_id}/` prefix.
+- **Compression is client-side**, and now exists purely to cut image tokens and
+  upload time. A canvas downscale to max 1280 px at JPEG quality ~0.7 yields
+  roughly 200–400 KB while preserving enough detail to identify a dish. EXIF is
+  dropped by the re-encode, so orientation is baked in and location is not sent.
+- **One endpoint accepts an image:** `/api/analyze`. `POST /api/entries` has no
+  image field and is `.strict()`, so a photo cannot be smuggled into the database
+  by a client that still tries. The bytes now cross the wire exactly once.
+- **Validation still runs** in `lib/server/images.ts`: a MIME allowlist, a 3.5 MB
+  decoded cap, and a **magic-byte** check against the declared type, because a
+  content type is only a claim. The body-parser limit is 4 MB — Vercel hard-caps
+  a request payload at 4.5 MB (`413 FUNCTION_PAYLOAD_TOO_LARGE`) before a handler
+  runs, so a larger local limit would accept requests production rejects.
+- **Deletion is not a concern any more.** Deleting an entry is one `delete`;
+  deleting a user is the `on delete cascade`. There is no orphan sweeper, no
+  temporary-key lifecycle, and no bucket to keep in sync with the rows.
+
+`db/migrations/003_drop_entry_image_key.sql` drops the `image_key` column. It
+records the one manual step: emptying the old R2 bucket, which must be done from
+the Cloudflare dashboard, because the code that knew the keys is gone.
 
 ---
 
@@ -300,7 +315,7 @@ Both prompts are loaded from the `prompts` table at request time, never from cod
 
 Collapsing the old image→description then description→score pair into one call halves both the latency and the cost of the primary path, and removes an intermediate state that had no user-visible value.
 
-**The score is never accepted from the client.** `POST /api/entries` takes only `{ description, is_homemade, entry_date, tz_offset_minutes, image? }`. This closes "no interface anywhere lets a user alter a score" at the protocol level rather than by hiding an input.
+**The score is never accepted from the client.** `POST /api/entries` takes only `{ description, is_homemade, entry_date, tz_offset_minutes }`. This closes "no interface anywhere lets a user alter a score" at the protocol level rather than by hiding an input.
 
 **Re-scoring** is decided in one function in `lib/server/entries.ts`: a PATCH whose `description` or `is_homemade` differs from the stored row re-scores before committing; a date-only change does not.
 
@@ -348,7 +363,7 @@ Four layers: one call instead of two on the photo path; client-side compression 
 
 ## 9. Operations
 
-- **Secrets** (`OPENAI_API_KEY`, `AI_PROVIDER`, `AI_MODEL`, `R2_*`, `GOOGLE_CLIENT_ID`, `SESSION_SECRET`, `DATABASE_URL`, `ALLOWED_EMAILS`, `ADMIN_EMAILS`, `DEBUG_AUTH`, `DEBUG_ADMIN`) are server-only env vars. Only `VITE_`-prefixed values reach the browser, and the only one needed there is the public Google client ID.
+- **Secrets** (`OPENAI_API_KEY`, `AI_PROVIDER`, `AI_MODEL`, `GOOGLE_CLIENT_ID`, `SESSION_SECRET`, `DATABASE_URL`, `ALLOWED_EMAILS`, `ADMIN_EMAILS`, `DEBUG_AUTH`, `DEBUG_ADMIN`) are server-only env vars. Only `VITE_`-prefixed values reach the browser, and the only one needed there is the public Google client ID.
 - **Environment template:** a committed `.env.local.example` documenting every variable and which side it belongs to.
 - **Logging:** log every analysis with model, latency, token cost and resulting score — never image bytes — so prompt tuning can be evaluated against real spend.
 - **Quality gates:** `npm run typecheck` (strict) and `npm test` before every deploy. Vercel preview deployments per branch.
@@ -362,7 +377,7 @@ Four layers: one call instead of two on the photo path; client-side compression 
 3. Session cookie auth, allowlist gate, user provisioning. Verify that a blocked email is refused.
 4. `domain/scoring.ts` and `domain/aggregation.ts` with their Vitest suites — **before any UI**. These are the rules that must not regress.
 5. Text logging end-to-end: `/api/analyze` → review screen → `POST /api/entries`. Today screen.
-6. R2 bucket and `lib/server/blob.ts`. Photo logging: compress, analyze, save, `/api/image`, plus the unrecognized-food fallback. Quick check needs no work beyond Discard.
+6. Photo logging: compress, analyze, review, save, plus the unrecognized-food fallback. The photo is never stored, so there is no bucket to provision. Quick check needs no work beyond Discard.
 7. History, entry detail, edit with re-score, delete.
 8. Dashboard aggregates and both charts.
 9. Me: settings, rubric reference page, CSV export.
@@ -398,7 +413,7 @@ Four layers: one call instead of two on the photo path; client-side compression 
 | 2 | Two lists in `vite.config.ts` | Fine, but the CI audit needs the same source of truth | Lists live in `tools/devApiPlugin.ts`; `scripts/audit-isolation.mjs` reads them and fails the build on drift |
 | 2 | `tsc --noEmit` strict across both halves | TypeScript 7 makes `baseUrl` a hard error; Vercel supports neither `paths` nor project references and reads the **root** tsconfig when compiling `api/` | Root tsconfig **is** the browser project; the server project omits `paths`, which turns an `@/` import in server code into a compile error |
 | 3 | `create extension pgcrypto` | Not in PGlite's base bundle, so the local fallback could not run the migration | Loaded as a PGlite contrib extension, so migrations run locally byte-for-byte as in Neon |
-| — | Not mentioned | Vercel Hobby allows **12 functions**; every `api/*.ts` is one | 11 used; the audit fails the build at 13, and methods are multiplexed inside a file rather than adding one |
+| — | Not mentioned | Vercel Hobby allows **12 functions**; every `api/*.ts` is one | 10 used; the audit fails the build at 13, and methods are multiplexed inside a file rather than adding one |
 
 ### Endpoints added beyond §2's list
 
@@ -445,7 +460,8 @@ is separate from `session.ts` only to break an import cycle.
 | "A `user_id` in a request body is ignored" | Request schemas are `.strict()`, so such a body is **rejected with a 400**. Silently dropping it makes a client bug that tries to set a score look like it worked. |
 | Where the AI budget is consumed | Read-only precheck in the handler; `consume()` inside `analyze()`, after a cache miss and immediately before the billable call. A cache hit must not cost quota. |
 | `tz_offset_minutes` sign | **Minutes east of UTC** (UTC-3 is `-180`), matching ISO-8601 and the opposite of `Date.getTimezoneOffset()`. Asserted on both sides. |
-| Image transport | Base64 in JSON. The runtime parses JSON for free and no multipart, one Zod schema validates the whole body, and ~400 KB becomes ~547 KB — well inside the 4 MB limit. |
+| Image transport | Base64 in JSON, to `/api/analyze` only. The runtime parses JSON for free and no multipart, one Zod schema validates the whole body, and ~400 KB becomes ~547 KB — well inside the 4 MB limit. |
+| Storing photos | **No.** See §6: the description is the record, and the archive cost an object store, four secrets and a function slot without changing a single score. |
 | `Secure` on the session cookie | Only when deployed. Safari refuses `Secure` cookies on `http://localhost`, so setting it unconditionally makes local dev silently lose sessions in a way that looks like an auth bug. |
 | Reasoning depth | `AI_EFFORT`, default `low`. See functional spec §9 for the latency measurements behind it. |
 
@@ -454,7 +470,7 @@ is separate from `session.ts` only to break an import cycle.
 React 19.2.8 · Vite 8.2.1 · TypeScript 7.0.2 · Tailwind 4.3.3 · react-router 7.18.2 ·
 Recharts 3.10.1 · Zod 4.4.3 · `@neondatabase/serverless` 1.1.0 · jose 6.2.9 ·
 google-auth-library 11.0.2 · `@anthropic-ai/sdk` 0.119.0 · openai 7.5.0 ·
-aws4fetch 1.0.20 · Vitest 4.1.11 · PGlite 0.5.5 (dev only) · Node 24.
+Vitest 4.1.11 · PGlite 0.5.5 (dev only) · Node 24.
 
 `@vercel/node` is **not** a dependency: the handler contract is ~20 lines in
 `lib/server/http.ts`, which avoids a dev dependency with high-severity advisories
@@ -462,11 +478,11 @@ in production code's type surface.
 
 ### What is verified, and what is not
 
-Verified locally with no cloud accounts, plus a real Anthropic key: 209 unit and
+Verified locally with no cloud accounts, plus a real Anthropic key: 208 unit and
 integration tests, four strict typecheck projects, the isolation audit, a
 production build, every endpoint driven end to end, and the five screens driven in
 a browser at 390×844.
 
-**Not yet exercised:** real Google sign-in, Neon, R2, and a Vercel deployment —
-all four need credentials this build does not have. The code paths exist and are
+**Not yet exercised:** real Google sign-in, Neon, and a Vercel deployment —
+all three need credentials this build does not have. The code paths exist and are
 typechecked; they have not been run against the live services.

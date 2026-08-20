@@ -1,4 +1,3 @@
-import { assertImageBytes } from '../lib/server/blob.js'
 import {
   createEntry,
   deleteEntry,
@@ -89,18 +88,11 @@ async function create(
   const body = zCreateEntry.parse(req.body)
   assertBurst(email)
 
-  if (body.image) {
-    assertImageBytes(Buffer.from(body.image.data_base64, 'base64'), body.image.content_type)
-  }
-
   const entry = await createEntry(userId, email, {
     entryDate: body.entry_date,
     tzOffsetMinutes: body.tz_offset_minutes,
     description: body.description,
     isHomemade: body.is_homemade,
-    ...(body.image
-      ? { image: { base64: body.image.data_base64, contentType: body.image.content_type } }
-      : {}),
   })
   res.status(201).json({ entry })
 }

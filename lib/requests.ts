@@ -47,7 +47,7 @@ export const zEmail = z
   .regex(/^[^\s@]+@[^\s@]+$/, 'must look like an email address')
 
 /**
- * An image on the wire.
+ * An image on the wire. /api/analyze only -- nothing else accepts one.
  *
  * Base64 inside JSON rather than multipart: the serverless runtime parses JSON
  * for free and parses no multipart, a ~400 KB JPEG becomes ~547 KB of base64,
@@ -64,7 +64,7 @@ export const zImage = z
       .min(1)
       .max(4_800_000)
       // A data: URL prefix is a common client mistake and would corrupt the
-      // decode; reject it explicitly rather than storing a broken object.
+      // decode; reject it explicitly rather than sending the model garbage.
       .refine((value) => !value.includes('base64,'), 'send raw base64, not a data: URL'),
   })
   .strict()
@@ -90,9 +90,8 @@ export const zCreateEntry = z
     tz_offset_minutes: zTzOffset,
     description: zDescription,
     is_homemade: z.boolean(),
-    // Store path is JPEG only, so the R2 key can honestly be .jpg
-    // (utils/image.ts always re-encodes to JPEG anyway).
-    image: zImage.extend({ content_type: z.literal('image/jpeg') }).optional(),
+    // No image field, and .strict() means one cannot be smuggled in: a photo is
+    // input to /api/analyze only and is never stored (tech spec §6).
   })
   .strict()
 

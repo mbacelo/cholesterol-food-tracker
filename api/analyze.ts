@@ -1,6 +1,6 @@
 import { analyze } from '../lib/ai/analyze.js'
 import { localDayFromOffset } from '../lib/dates.js'
-import { assertImageBytes } from '../lib/server/blob.js'
+import { assertImageBytes } from '../lib/server/images.js'
 import { assertMethod, handleError } from '../lib/server/errors.js'
 import type { ApiRequest, ApiResponse } from '../lib/server/http.js'
 import { zAnalyze, zTzOffset } from '../lib/requests.js'

@@ -208,8 +208,8 @@ export function AdminUsers() {
               Esto elimina definitivamente{' '}
               <strong className="font-semibold">
                 {deleting.count} {deleting.count === 1 ? 'registro' : 'registros'}
-              </strong>{' '}
-              y sus fotos. El contenido de los registros nunca se muestra aquí. Esto no se puede deshacer.
+              </strong>
+              . El contenido de los registros nunca se muestra aquí. Esto no se puede deshacer.
             </p>
           ) : null
         }

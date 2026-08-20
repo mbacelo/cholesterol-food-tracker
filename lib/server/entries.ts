@@ -3,7 +3,6 @@ import { analyze } from '../ai/analyze.js'
 import type { Factor } from '../ai/schemas.js'
 import { db, oneOr404 } from './db.js'
 import { ApiError } from './errors.js'
-import * as blob from './blob.js'
 import { isFutureLocalDate } from '../dates.js'
 
 /**
@@ -38,27 +37,22 @@ export interface EntryPublic {
   rationale: string
   positive_factors: Factor[]
   negative_factors: Factor[]
-  /** Whether a photo exists. The R2 key itself never leaves this file. */
-  has_image: boolean
   created_at: string
   updated_at: string
 }
 
-interface EntryRow extends EntryPublic {
-  image_key: string | null
-}
-
-export interface ImageBytes {
-  base64: string
-  contentType: 'image/jpeg'
-}
+/**
+ * What a select returns. Identical to EntryPublic today, and kept separate
+ * because the row and the response are different things: the moment a column is
+ * added that must not be returned, this is where it goes.
+ */
+type EntryRow = EntryPublic
 
 export interface CreateEntryInput {
   entryDate: string
   tzOffsetMinutes: number
   description: string
   isHomemade: boolean
-  image?: ImageBytes
 }
 
 export interface EntryPatch {
@@ -73,10 +67,16 @@ export interface Cursor {
   created_at: string
 }
 
-/** Strips image_key, so it cannot escape this module by accident. */
+/**
+ * The row-to-response boundary.
+ *
+ * Every select in this file goes through it, so a column added to food_entries
+ * later cannot reach a response by default -- it has to be added to EntryPublic
+ * first. That is the whole point of keeping the function now that the row and
+ * the public shape are identical.
+ */
 function toPublic(row: EntryRow): EntryPublic {
-  const { image_key, ...rest } = row
-  return { ...rest, has_image: image_key !== null }
+  return { ...row }
 }
 
 /**
@@ -111,12 +111,8 @@ function assertNotFuture(date: string, tzOffsetMinutes: number): void {
 /**
  * Creates an entry.
  *
- * Ordering matters, and is chosen so no failure can leave a bad row:
- *   1. generate the id here, so the image key is known before the insert;
- *   2. score it -- an entry without a score must never exist;
- *   3. write the image;
- *   4. insert;
- *   5. if the insert fails, remove the object we just wrote.
+ * Scored BEFORE the insert, because an entry without a score must never exist.
+ * Nothing else is written, so there is nothing to roll back if the insert fails.
  */
 export async function createEntry(
   userId: string,
@@ -125,8 +121,6 @@ export async function createEntry(
 ): Promise<EntryPublic> {
   assertNotFuture(input.entryDate, input.tzOffsetMinutes)
 
-  const entryId = randomUUID()
-
   const result = await analyze({
     description: input.description,
     isHomemade: input.isHomemade,
@@ -134,41 +128,26 @@ export async function createEntry(
     localDay: input.entryDate,
   })
 
-  let imageKey: string | null = null
-  if (input.image) {
-    imageKey = blob.entryImageKey(userId, entryId)
-    await blob.put(imageKey, Buffer.from(input.image.base64, 'base64'), input.image.contentType)
-  }
-
-  try {
-    const rows = await db()<EntryRow>`
-      insert into food_entries (
-        id, user_id, entry_date, description, is_homemade,
-        score, rationale, positive_factors, negative_factors, image_key
-      ) values (
-        ${entryId}, ${userId}, ${input.entryDate}, ${result.description}, ${input.isHomemade},
-        ${result.score}, ${result.rationale},
-        ${JSON.stringify(result.positiveFactors)}::jsonb,
-        ${JSON.stringify(result.negativeFactors)}::jsonb,
-        ${imageKey}
-      )
-      returning id, entry_date::text as entry_date, description, is_homemade, score, rationale,
-                positive_factors, negative_factors, image_key, created_at, updated_at
-    `
-    return toPublic(oneOr404(rows))
-  } catch (err) {
-    if (imageKey) {
-      // Do not leave an orphaned object behind.
-      await blob.remove(imageKey).catch(() => undefined)
-    }
-    throw err
-  }
+  const rows = await db()<EntryRow>`
+    insert into food_entries (
+      id, user_id, entry_date, description, is_homemade,
+      score, rationale, positive_factors, negative_factors
+    ) values (
+      ${randomUUID()}, ${userId}, ${input.entryDate}, ${result.description}, ${input.isHomemade},
+      ${result.score}, ${result.rationale},
+      ${JSON.stringify(result.positiveFactors)}::jsonb,
+      ${JSON.stringify(result.negativeFactors)}::jsonb
+    )
+    returning id, entry_date::text as entry_date, description, is_homemade, score, rationale,
+              positive_factors, negative_factors, created_at, updated_at
+  `
+  return toPublic(oneOr404(rows))
 }
 
 export async function listEntriesForDate(userId: string, date: string): Promise<EntryPublic[]> {
   const rows = await db()<EntryRow>`
     select id, entry_date::text as entry_date, description, is_homemade, score, rationale,
-           positive_factors, negative_factors, image_key, created_at, updated_at
+           positive_factors, negative_factors, created_at, updated_at
       from food_entries
      where user_id = ${userId} and entry_date = ${date}
      order by created_at asc
@@ -204,7 +183,7 @@ export async function listEntries(
 
   const rows = await db()<EntryRow>`
     select id, entry_date::text as entry_date, description, is_homemade, score, rationale,
-           positive_factors, negative_factors, image_key, created_at, updated_at
+           positive_factors, negative_factors, created_at, updated_at
       from food_entries
      where user_id = ${userId}
        and (${search}::text is null or description ilike '%' || ${search}::text || '%')
@@ -242,26 +221,11 @@ export async function listEntries(
 export async function getEntry(userId: string, entryId: string): Promise<EntryPublic> {
   const rows = await db()<EntryRow>`
     select id, entry_date::text as entry_date, description, is_homemade, score, rationale,
-           positive_factors, negative_factors, image_key, created_at, updated_at
+           positive_factors, negative_factors, created_at, updated_at
       from food_entries
      where id = ${entryId} and user_id = ${userId}
   `
   return toPublic(oneOr404(rows))
-}
-
-/**
- * The R2 key for an entry's photo.
- *
- * Ownership is verified in Postgres HERE, before any URL is signed. The
- * {user_id}/ prefix in the key is organizational, not a security control.
- */
-export async function getEntryImageKey(userId: string, entryId: string): Promise<string> {
-  const rows = await db()<{ image_key: string | null }>`
-    select image_key from food_entries where id = ${entryId} and user_id = ${userId}
-  `
-  const row = oneOr404(rows)
-  if (!row.image_key) throw new ApiError(404, 'not_found')
-  return row.image_key
 }
 
 export interface UpdateResult {
@@ -298,7 +262,7 @@ export async function updateEntry(
          set entry_date = ${entryDate}, updated_at = now()
        where id = ${entryId} and user_id = ${userId}
       returning id, entry_date::text as entry_date, description, is_homemade, score, rationale,
-                positive_factors, negative_factors, image_key, created_at, updated_at
+                positive_factors, negative_factors, created_at, updated_at
     `
     return { entry: toPublic(oneOr404(rows)), rescored: false }
   }
@@ -325,24 +289,17 @@ export async function updateEntry(
            updated_at = now()
      where id = ${entryId} and user_id = ${userId}
     returning id, entry_date::text as entry_date, description, is_homemade, score, rationale,
-              positive_factors, negative_factors, image_key, created_at, updated_at
+              positive_factors, negative_factors, created_at, updated_at
   `
   return { entry: toPublic(oneOr404(rows)), rescored: true }
 }
 
-/** Deletes the row, then its photo. */
 export async function deleteEntry(userId: string, entryId: string): Promise<void> {
-  const rows = await db()<{ image_key: string | null }>`
+  const rows = await db()<{ id: string }>`
     delete from food_entries where id = ${entryId} and user_id = ${userId}
-    returning image_key
+    returning id
   `
-  const row = oneOr404(rows)
-  if (row.image_key) {
-    // A stray object is harmless; a 500 on an otherwise successful delete is not.
-    await blob.remove(row.image_key).catch((err) => {
-      console.error('[entries] failed to remove image after delete', err)
-    })
-  }
+  oneOr404(rows)
 }
 
 export interface DayTotalsRow {

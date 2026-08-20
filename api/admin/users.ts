@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { remove as removeBlobs } from '../../lib/server/blob.js'
 import { countEntriesForUser } from '../../lib/server/entries.js'
 import { assertMethod, handleError } from '../../lib/server/errors.js'
 import { ApiError } from '../../lib/server/errors.js'
@@ -16,12 +15,11 @@ const zDelete = z.object({ confirm_entry_count: z.number().int().min(0) }).stric
  * The administrator can learn exactly one thing about someone's food data: HOW
  * MANY entries there are. A count is not content, and it is what the deletion
  * confirmation needs in order to state the consequence honestly. No response
- * from this file can carry a description, image key, score or rationale.
+ * from this file can carry a description, score or rationale.
  *
- * Deletion order: photos first, then the row. `on delete cascade` removes the
- * entries, and the R2 prefix delete removes the images. Doing the blobs first
- * means a failure leaves orphaned rows we can still find and retry, rather than
- * orphaned objects we no longer have keys for.
+ * Deletion is a single statement: `on delete cascade` removes the entries with
+ * the user row. There is nothing outside Postgres to clean up, because photos
+ * are never stored (tech spec §6).
  */
 export default async function handler(req: ApiRequest, res: ApiResponse): Promise<void> {
   try {
@@ -53,13 +51,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
       throw new ApiError(409, 'conflict', 'entry count changed; reload and confirm again', true)
     }
 
-    const deletedObjects = await removeBlobs(`${user.id}/`).catch((err) => {
-      console.error('[admin/users] failed to remove blobs', err)
-      return 0
-    })
     await deleteUserById(user.id)
 
-    res.status(200).json({ deleted_entries: actual, deleted_objects: deletedObjects })
+    res.status(200).json({ deleted_entries: actual })
   } catch (err) {
     return handleError(res, err, `${req.method} /api/admin/users`)
   }

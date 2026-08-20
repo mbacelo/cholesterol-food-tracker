@@ -16,7 +16,6 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.119.0",
     "@neondatabase/serverless": "^1.1.0",
-    "aws4fetch": "^1.0.20",
     "google-auth-library": "^11.0.2",
     "jose": "^6.2.9",
     "lucide-react": "^1.33.0",

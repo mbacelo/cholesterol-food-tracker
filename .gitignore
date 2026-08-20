@@ -7,9 +7,8 @@ dist/
 .env.local
 .env.*.local
 
-# Local dev fallbacks for Neon and R2 (see lib/server/db.ts, lib/server/blob.ts)
+# Local dev fallback for Neon (see lib/server/db.ts)
 .dev-data/
-.dev-blobs/
 
 # Tooling
 node_modules/.tmp/

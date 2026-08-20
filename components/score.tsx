@@ -1,4 +1,4 @@
-import { ChefHat, ImageOff, Minus, ShoppingBag, TrendingDown, TrendingUp } from 'lucide-react'
+import { ChefHat, Minus, ShoppingBag, TrendingDown, TrendingUp } from 'lucide-react'
 import { Link } from 'react-router'
 import { formatAverage, formatScore, scoreColor } from '@/utils/scoreColor'
 import { formatDayLabel } from '@/utils/localDate'
@@ -136,27 +136,6 @@ export function HomemadeIcon({ isHomemade }: { isHomemade: boolean }) {
   )
 }
 
-export function EntryThumbnail({ entry }: { entry: Entry }) {
-  if (!entry.has_image) {
-    return (
-      <div className="grid size-14 shrink-0 place-items-center rounded-lg bg-slate-100">
-        <ImageOff className="size-5 text-slate-300" aria-hidden="true" />
-      </div>
-    )
-  }
-  return (
-    <img
-      src={`/api/image?entry=${entry.id}`}
-      alt=""
-      width={56}
-      height={56}
-      loading="lazy"
-      decoding="async"
-      className="size-14 shrink-0 rounded-lg object-cover"
-    />
-  )
-}
-
 /** One row, shared by Today and History so they cannot drift apart. */
 export function EntryRow({ entry, highlight = false }: { entry: Entry; highlight?: boolean }) {
   return (
@@ -167,7 +146,6 @@ export function EntryRow({ entry, highlight = false }: { entry: Entry; highlight
           highlight ? `ring-2 ${scoreColor(entry.score).ring}` : ''
         }`}
       >
-        <EntryThumbnail entry={entry} />
         <span className="min-w-0 flex-1">
           <span className="line-clamp-2 text-sm font-medium text-slate-900">
             {entry.description}

@@ -196,9 +196,8 @@ export default function Log() {
           entry_date: entryDate,
           description: description.trim(),
           is_homemade: isHomemade,
-          ...(image
-            ? { image: { content_type: image.contentType, data_base64: image.base64 } }
-            : {}),
+          // No image: the photo was input to /api/analyze and nothing more. The
+          // description it produced is the record (tech spec §6).
         },
       })
       clearCapture()
@@ -206,7 +205,7 @@ export default function Log() {
     } catch (err) {
       setPhase({ kind: 'error', message: errorMessage(err) })
     }
-  }, [description, entryDate, image, isHomemade, navigate])
+  }, [description, entryDate, isHomemade, navigate])
 
   const discard = useCallback(() => {
     abortRef.current?.abort()
@@ -327,7 +326,18 @@ export default function Log() {
       <ScreenHeader title="Revisar" subtitle="Tú describes la comida; la app decide el puntaje." />
 
       {image ? (
-        <img src={image.dataUrl} alt="" className="mt-1 max-h-56 w-full rounded-card object-cover" />
+        <>
+          <img
+            src={image.dataUrl}
+            alt=""
+            className="mt-1 max-h-56 w-full rounded-card object-cover"
+          />
+          {/* Said once, here: the photo is a way to describe the dish, not part
+              of the record. Without this the preview implies it is being saved. */}
+          <p className="mt-2 text-xs text-slate-500">
+            La foto sólo sirve para identificar el plato; no se guarda.
+          </p>
+        </>
       ) : null}
       {imageVolatile ? (
         <p className="mt-2 text-xs text-amber-700">
@@ -338,8 +348,8 @@ export default function Log() {
       {noFood ? (
         <div role="status" className="mt-4 rounded-card border border-amber-200 bg-amber-50 p-3">
           <p className="text-sm text-amber-900">
-            No pude identificar comida en esta foto. Describe el plato y le calcularé el puntaje
-            — la foto queda adjunta.
+            No pude identificar comida en esta foto. Describe el plato y le calcularé el
+            puntaje.
           </p>
         </div>
       ) : null}
