@@ -293,10 +293,6 @@ What remains:
   deleting a user is the `on delete cascade`. There is no orphan sweeper, no
   temporary-key lifecycle, and no bucket to keep in sync with the rows.
 
-`db/migrations/003_drop_entry_image_key.sql` drops the `image_key` column. It
-records the one manual step: emptying the old R2 bucket, which must be done from
-the Cloudflare dashboard, because the code that knew the keys is gone.
-
 ---
 
 ## 7. AI scoring
@@ -367,6 +363,21 @@ Four layers: one call instead of two on the photo path; client-side compression 
 - **Environment template:** a committed `.env.local.example` documenting every variable and which side it belongs to.
 - **Logging:** log every analysis with model, latency, token cost and resulting score — never image bytes — so prompt tuning can be evaluated against real spend.
 - **Quality gates:** `npm run typecheck` (strict) and `npm test` before every deploy. Vercel preview deployments per branch.
+- **`vercel.json`** carries three decisions that are not self-evident, and cannot
+  be commented in the file itself — Vercel validates the schema strictly and
+  rejects an unknown `//` property:
+  - **The SPA rewrite excludes `/api/`** via the negative lookahead in
+    `/((?!api/).*)`. Without it an unregistered `/api/*` path returns
+    `index.html` with status 200, the client's `res.json()` throws a syntax
+    error, and the real problem — a missing route — is completely hidden. With
+    it, Vercel's own 404 surfaces.
+  - **`/api/*` is `no-store`.** Every API response is user-specific, and none is
+    large enough for a cache to be worth any risk of serving one person's data
+    to another.
+  - **`regions` is pinned to `iad1`**, which must match the Neon project's region
+    (`aws-us-east-1`). The HTTP driver's round-trip dominates most endpoints, so
+    a mismatched pair degrades every screen. Pinned here rather than left to the
+    dashboard default so the pairing is visible to a reviewer.
 
 ---
 

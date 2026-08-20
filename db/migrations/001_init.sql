@@ -26,6 +26,10 @@ create table allowlist (
 );
 -- "invited vs active" is derived: a matching users row means they have signed in.
 
+-- There is deliberately no image column. A photo is input to /api/analyze and
+-- nothing else: compressed on the device, read by the model, shown while the Log
+-- screen is open, then discarded. The description is the record, so there is no
+-- object store to provision and no keys to keep in sync with these rows.
 create table food_entries (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references users(id) on delete cascade,
@@ -39,7 +43,6 @@ create table food_entries (
   rationale   text not null,
   positive_factors jsonb not null default '[]',  -- [{label, reason}]
   negative_factors jsonb not null default '[]',
-  image_key   text,                              -- R2 object key, never a URL
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );

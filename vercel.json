@@ -4,20 +4,19 @@
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
   "outputDirectory": "dist",
+  "regions": ["iad1"],
   "functions": {
     "api/analyze.ts": { "maxDuration": 60 },
     "api/entries.ts": { "maxDuration": 60 }
   },
   "rewrites": [
     {
-      "//": "SPA fallback. The negative lookahead is mandatory: without it an unregistered /api/* path returns index.html with status 200, and the client's res.json() throws a syntax error that hides the real problem. With it, Vercel's own 404 surfaces.",
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
     {
-      "//": "Authenticated JSON must never be cached. Every /api response is user-specific, and none of them is large enough for a cache to be worth the risk of serving one person's data to another.",
       "source": "/api/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-store, max-age=0" },

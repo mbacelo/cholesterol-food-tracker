@@ -62,7 +62,7 @@ because the dev plugin does not run in preview. That is expected, not an outage.
 ## Deploying
 
 1. Neon project; run `db/migrations/001_init.sql` then `002_seed_prompts.sql` in
-   the SQL editor, then `003_drop_entry_image_key.sql`.
+   the SQL editor.
 2. Google OAuth client ID.
 3. Set every variable from `.env.local.example` in Vercel, for Production **and**
    Preview, except `DEBUG_AUTH`/`DEBUG_ADMIN` — those are ignored when deployed

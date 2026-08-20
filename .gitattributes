@@ -1,0 +1,11 @@
+# This repository is LF-only in the working tree, not just in the index.
+#
+# Windows checkouts commonly set core.autocrlf=true, which rewrites text files to
+# CRLF on checkout. scripts/generate-seed.mjs always writes LF, and
+# lib/ai/prompts/defaults.test.ts compares the regenerated 002_seed_prompts.sql
+# byte-for-byte -- so a CRLF checkout fails that test with an empty `git diff`,
+# which is a genuinely confusing way to lose an afternoon.
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
