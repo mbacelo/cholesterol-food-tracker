@@ -1,11 +1,6 @@
-# Cholesterol Food Tracker, Functional Specification (v1.1)
+# Cholesterol Food Tracker, Functional Specification
 
 Defines **what** the app does. `tech-spec.md` defines **how** it is built.
-
-> **Status: implemented.** This document has been reconciled with the shipped
-> code. Where building the app proved a rule wrong, ambiguous, or impossible as
-> written, the rule is corrected here and the change is called out in a
-> *Reconciliation* note. Changes since v1 are listed in §9.
 
 ---
 
@@ -61,7 +56,7 @@ The only record in the application. One entry is one dish eaten on one date.
 | `rationale` | text | yes | no | Why it scored what it scored, naming specific ingredients. 1 to 3 sentences. |
 | `positive_factors` | list of `{label, reason}` | no | no | Ingredients or preparations that improved the score. |
 | `negative_factors` | list of `{label, reason}` | no | no | Ingredients or preparations that worsened the score. |
-| ~~`image`~~ | — | — | — | **Not stored.** A photo is input to the analysis and nothing else: it is shown while the Log flow is open and discarded on save. *(Reconciliation, v1.3.)* |
+There is no image field. A photo is input to the analysis and nothing else: it is shown while the Log flow is open and discarded when the flow ends.
 
 Deliberately minimal: **what it was, when, whether it was homemade, what it scored.**
 
@@ -149,19 +144,16 @@ Every dish starts at **0** and the modifiers below apply. Quantity is ignored: a
 3. A dish built only on vegetables, fruit, legumes or whole grains, with no added saturated fat, scores **at least +1** — **unless rule 2 applied**, in which case the cap wins and this floor is skipped.
 4. Clamp to -5..+5.
 
-> **Reconciliation (v1.1).** Two corrections, both found while implementing this
-> section:
+> **Why rule 3 is gated on rule 2.** A dish flagged as both whole-plant and
+> trans-fat cannot be real, so the cap — the stronger, more specific signal —
+> wins, and the collision is logged as a prompt-quality signal rather than
+> silently resolved. Ungated, the floor would undo the cap and land such a dish
+> at +1.
 >
-> - **Rule 3 is now gated on rule 2.** As written, the literal order let the floor
->   undo the cap: a dish flagged as both whole-plant and trans-fat would end at
->   +1, contradicting the acceptance criterion that the cap holds. The two flags
->   cannot both be true of a real dish, so the cap — the stronger, more specific
->   signal — takes precedence, and the collision is logged as a prompt-quality
->   signal rather than silently resolved.
-> - **Rule 1 cannot be applied to a clamped score.** It operates on the running
->   modifier total, not on the final -5..+5 value; applying it after clamping is
->   off by one. The AI contract in §6.3 therefore returns the unclamped total, and
->   the app does all four steps itself.
+> **Why rule 1 acts before the clamp.** It operates on the running modifier
+> total, not on the final -5..+5 value; applying it to a clamped score is off by
+> one. This is why the AI contract in §6.3 returns the unclamped total and the
+> app performs all four steps itself.
 
 **Note on the homemade flag.** `is_homemade` is context for the AI. When a dish is marked as bought and the description does not identify the cooking fat, the AI assumes a less favorable preparation and says so in the rationale. This lives in `scoring_prompt` and can be softened or removed by the administrator.
 
@@ -223,10 +215,10 @@ Mobile-first. Five destinations in a persistent bottom navigation bar.
 
 **Required behaviors**
 
-- Editing the description or the homemade checkbox on the review screen requires a **re-score before saving**: the stale score stays visible and marked as stale, Save is blocked, and the re-score runs **on demand** when the user taps it. Scoring is never triggered by typing, by a blur or by a timer -- a keystroke must never be able to spend money. *(Reconciliation, v1.2: an earlier build re-scored on a debounced pause in typing, which charged for every intermediate phrase.)*
+- Editing the description or the homemade checkbox on the review screen requires a **re-score before saving**: the stale score stays visible and marked as stale, Save is blocked, and the re-score runs **on demand** when the user taps it. Scoring is never triggered by typing, by a blur or by a timer -- a keystroke must never be able to spend money.
 - The score and rationale are never directly editable. If the user disagrees, the remedy is to correct the description.
 - If the AI cannot identify food in the image, the app says so and asks the user to type a description. The photo stays on screen as a reference while they do.
-- If the user *types* something that is not a dish ("asdf"), the entry is still scorable: it scores **0** with a rationale saying the text does not describe a recognisable dish. Asking someone who just typed to "type a description" would be a loop. *(Reconciliation, v1.1: v1 defined this fallback only for images.)*
+- If the user *types* something that is not a dish ("asdf"), the entry is still scorable: it scores **0** with a rationale saying the text does not describe a recognisable dish. Asking someone who just typed to "type a description" would be a loop.
 - If analysis fails, the user sees a clear error and a retry action. Nothing is ever saved without a score.
 - A page refresh during review must not force a second paid analysis: the in-progress capture and its result survive a reload.
 
@@ -248,24 +240,16 @@ Given an image and/or a description, plus the homemade flag, one analysis return
 | `has_trans_fat`, `whole_plant_only`, `proxy_ultra_processed`, `proxy_unidentified_fat` | Booleans, so the app applies the §4.2 cap, floor and proxy cap itself rather than trusting the model's arithmetic. |
 | `food_detected` | False when the image contains no identifiable food, which drives the 6.1 fallback. |
 
-> **Reconciliation (v1.1).** v1 listed only `has_trans_fat` and
-> `whole_plant_only`, and a `score` constrained to -5..+5. That is not enough to
-> enforce §4.2 rule 1: capping the two proxy penalties requires knowing whether
-> the model charged one or both, and the cap has to act on an unclamped total.
-> `modifier_sum` and the two `proxy_*` booleans were added, and `score` became an
-> **advisory cross-check** — the app recomputes the stored integer from
-> `modifier_sum` and the booleans, so a model whose own arithmetic disagrees
-> cannot change what is stored. A large divergence between the two is logged,
-> because it is the clearest early signal that a prompt edit has gone wrong.
->
-> Also: when the user has typed a description, the image is **not sent**. The
-> description is the only scored input (§3.1), so sending the photo would cost
-> image tokens for a text-only answer and split the cache key for two identical
-> descriptions.
+`score` is an **advisory cross-check only.** The app recomputes the stored
+integer from `modifier_sum` and the booleans, so a model whose own arithmetic
+disagrees cannot change what is stored. A large divergence between the two is
+logged, because it is the clearest early signal that a prompt edit has gone
+wrong.
 
 **Constraints**
 
 - Description and score come from a **single analysis**, so the photo path costs one model call, not two.
+- When the user has typed a description, the image is **not sent**. The description is the only scored input (§3.1), so sending the photo would cost image tokens for a text-only answer and split the cache key for two identical descriptions.
 - Cooking fats and sauces must be inferred where visible or implied; they often drive the score more than the visible main ingredient.
 - Preparation method must be inferred where visible: fried versus grilled versus steamed, visible cheese, visible sauces.
 - The same description scored twice must not differ by more than 1 point.
@@ -298,16 +282,15 @@ Answers one question first: **am I meeting my goal?**
 - **Average score for the period** against `daily_average_target`, with an unambiguous pass or miss state.
 - **Days on target**, for example "18 of 26 **complete** days met your target".
 
-> **Reconciliation (v1.1).** v1 said "logged days", which contradicts §4.4 and
-> business rule 9: incomplete days are excluded from goal pass or fail, so they
-> cannot be in the denominator. The denominator is complete days, and incomplete
-> days are reported separately ("3 days had fewer than 2 entries and are counted
-> as incomplete") so the figure is not silently narrower than it looks.
->
-> **Period average** was undefined in v1. It is the mean of the *complete days'
-> daily averages* — not a pooled mean of all entries — because the target is
-> expressed as a daily average and the two figures must be comparable. Pooling
-> would weight a six-entry day three times more heavily than a two-entry day.
+The denominator of "days on target" is **complete days**: incomplete days are
+excluded from goal pass or fail (§4.4, rule 9), so they cannot be counted in it.
+They are reported separately — "3 days had fewer than 2 entries and are counted
+as incomplete" — so the figure is not silently narrower than it looks.
+
+The **period average** is the mean of the *complete days' daily averages*, not a
+pooled mean of all entries, because the target is expressed as a daily average
+and the two figures must be comparable. Pooling would weight a six-entry day
+three times more heavily than a two-entry day.
 
 | Chart | Type | Content |
 |---|---|---|
@@ -431,32 +414,16 @@ Visible only to administrators. Contains no food data of any kind.
 
 ---
 
-## 9. Changes since v1 (reconciliation with the implementation)
+## 9. Cost and latency
 
-Every item below is a case where building the app showed v1 to be wrong,
-ambiguous, or impossible as written. Nothing here is a change of intent.
+Two facts about running the app that shape the product, not just the bill:
 
-| § | Change | Why |
-|---|---|---|
-| 4.2 | Organ meat and the second egg yolk are no longer penalized; fatty fish drops from +2 to +1 | Both were dietary-cholesterol and triglyceride effects, not LDL ones — the organ-meat penalty contradicted §4.2's own exemption for dietary cholesterol, and omega-3 moves triglycerides far more than LDL |
-| 4.2 | The whole-plant floor is skipped when the trans-fat cap applied | The literal rule order let the floor undo the cap, contradicting an acceptance criterion |
-| 4.2 / 6.3 | The AI returns an unclamped `modifier_sum` and two `proxy_*` booleans; its own `score` is advisory | The proxy cap cannot be applied without knowing which proxies fired, and cannot act on a clamped value |
-| 6.1 | Typed nonsense scores 0 with an honest rationale | The image fallback ("type a description") is a loop when the user already typed |
-| 6.3 | With a typed description, the image is not sent to the model | The description is the only scored input; sending the photo costs tokens and splits the cache key |
-| 6.7 | Days on target is out of **complete** days; period average is the mean of complete days' daily averages | v1 said "logged days", contradicting §4.4 and rule 9; the period average was undefined |
-| 7.5 | Reworded: the application computes the stored score | Makes explicit that the model's number is an input, not the answer |
-| 7.9 | Incomplete days are excluded from the period average too, but their entries still count in the distribution | v1 left the distribution's treatment implicit |
-| 3.1 / 6.4 / 6.5 | **Photos are no longer stored** (v1.3). The photo is input to the analysis, is visible through the Log flow, and is discarded on save or discard. No thumbnail on the entry row, no photo on the detail screen | Reviewing the built app, the archive was the one feature that added cost and risk without changing an answer: the description is what gets scored, and every screen reads the same with or without the picture. Storing it cost an object store, four secrets, a presigned-URL endpoint, two deletion paths and a Vercel function slot — and it meant keeping a growing record of photographs of someone's meals |
-
-### Two behaviours worth recording, which the spec did not anticipate
-
-- **Scoring latency is a product decision, not an implementation detail.** §1 asks
-  for "photo, confirm, done, in a few seconds". Measured on this rubric, one
-  uncached analysis takes ~17s at the model's default reasoning depth, ~11s at
-  medium and ~6s at low, with no visible quality loss at low — the rubric is
-  mechanical accumulation against an explicit list, not open-ended reasoning. The
-  app therefore runs at low depth by default and exposes the setting. A repeat is
-  a cache hit at ~0.1s.
+- **Scoring latency is a product decision.** §1 asks for "photo, confirm, done,
+  in a few seconds". Measured on this rubric, one uncached analysis takes ~17s at
+  the model's default reasoning depth, ~11s at medium and ~6s at low, with no
+  visible quality loss at low — the rubric is mechanical accumulation against an
+  explicit list, not open-ended reasoning. The app therefore runs at low depth by
+  default and exposes the setting. A repeat is a cache hit at ~0.1s.
 - **A discarded analysis is not free.** It costs a model call even though it
-  stores nothing, so the quick check in §6.2 is cheap in storage but not in money.
-  The daily cap in the technical spec is what bounds it.
+  stores nothing, so the quick check in §6.2 is cheap in storage but not in
+  money. The daily cap in the technical spec is what bounds it.

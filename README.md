@@ -6,8 +6,7 @@ personal goal. Mobile-first PWA; React SPA plus Vercel serverless functions.
 - `functional-spec.md` — what the app does
 - `tech-spec.md` — how it is built
 
-Both specs are reconciled with the shipped code; each has a v1.1 changelog
-listing where implementation proved the original wrong.
+Both describe the app as it stands. For how it got here, read the git history.
 
 ## Run it locally, with no cloud accounts
 

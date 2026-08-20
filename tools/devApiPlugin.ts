@@ -16,7 +16,7 @@ import type { ApiHandler, ApiRequest, ApiResponse } from '../lib/server/http.js'
  * -- The two lists --------------------------------------------------------
  * SERVER_ENV_KEYS and API_ENDPOINTS below must be updated in the SAME COMMIT
  * that adds an endpoint or a server env var. Getting that wrong is the
- * "404 locally but fine in production" risk in tech spec §11, so both lists
+ * "404 locally but fine in production" risk in tech spec §10, so both lists
  * fail loudly rather than silently: a request to an unlisted /api path returns
  * 501 naming this file, and an unlisted non-VITE_ key in .env.local warns at
  * startup instead of silently arriving at the handler as undefined.

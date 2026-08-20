@@ -11,7 +11,7 @@
  * Montevideo (UTC-3) sends -180. The client produces this as
  * `-new Date().getTimezoneOffset()`, because the JavaScript built-in has the
  * opposite sign. Getting this backwards produces an off-by-one-day rejection
- * near midnight, which is exactly the timezone-skew risk in tech spec §11, so
+ * near midnight, which is exactly the timezone-skew risk in tech spec §10, so
  * the convention is asserted in both this module's tests and the client's.
  */
 

@@ -50,7 +50,7 @@ describe('the scoring prompt encodes the whole rubric', () => {
   })
 
   it('names every negative and positive modifier line', () => {
-    // Nine negatives since organ meat was dropped in v1.2; still ten positives.
+    // Nine negatives, ten positives -- the rubric in functional spec §4.2.
     for (let i = 1; i <= 9; i += 1) {
       expect(SCORING_PROMPT).toMatch(new RegExp(`\\bN${i}\\b`))
     }
