@@ -1,15 +1,15 @@
 {
   "id": "/",
-  "name": "Cholesterol Food Tracker",
-  "short_name": "Cholesterol",
-  "description": "Log a dish, see its likely effect on your LDL, and track it against your goal.",
+  "name": "Registro de Colesterol",
+  "short_name": "Colesterol",
+  "description": "Registra un plato, mira su efecto probable en tu LDL y sigue tu objetivo.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f8fafc",
   "theme_color": "#ffffff",
-  "lang": "en",
+  "lang": "es",
   "dir": "ltr",
   "categories": [
     "health",
@@ -25,12 +25,12 @@
   ],
   "shortcuts": [
     {
-      "name": "Log a dish",
-      "short_name": "Log",
+      "name": "Registrar un plato",
+      "short_name": "Registrar",
       "url": "/log"
     },
     {
-      "name": "Dashboard",
+      "name": "Panel",
       "url": "/dashboard"
     }
   ]

@@ -54,7 +54,7 @@ export default function Me() {
       anchor.click()
       URL.revokeObjectURL(url)
     } catch {
-      setError('Could not export right now. Try again.')
+      setError('No se pudo exportar ahora. Inténtalo de nuevo.')
     } finally {
       setExporting(false)
     }
@@ -64,18 +64,18 @@ export default function Me() {
 
   return (
     <>
-      <ScreenHeader title="Me" subtitle={user.email} />
+      <ScreenHeader title="Perfil" subtitle={user.email} />
 
-      <section aria-label="Goal" className="mt-2 rounded-card bg-white p-4">
-        <h2 className="text-sm font-semibold text-slate-900">Daily average target</h2>
+      <section aria-label="Objetivo" className="mt-2 rounded-card bg-white p-4">
+        <h2 className="text-sm font-semibold text-slate-900">Objetivo de promedio diario</h2>
         <p className="mt-1 text-xs text-slate-600">
-          Your daily average should be at or above {formatAverage(target)}.
+          Tu promedio diario debería ser {formatAverage(target)} o más.
         </p>
 
         <div className="mt-3 flex items-center gap-3">
           <button
             type="button"
-            aria-label="Lower target"
+            aria-label="Bajar el objetivo"
             disabled={target <= TARGET_MIN}
             onClick={() => void change({ daily_average_target: target - TARGET_STEP })}
             className="tap grid place-items-center rounded-lg border border-slate-300 disabled:opacity-40"
@@ -88,7 +88,7 @@ export default function Me() {
             max={TARGET_MAX}
             step={TARGET_STEP}
             value={target}
-            aria-label="Daily average target"
+            aria-label="Objetivo de promedio diario"
             onChange={(event) =>
               void change({ daily_average_target: Number(event.target.value) })
             }
@@ -96,7 +96,7 @@ export default function Me() {
           />
           <button
             type="button"
-            aria-label="Raise target"
+            aria-label="Subir el objetivo"
             disabled={target >= TARGET_MAX}
             onClick={() => void change({ daily_average_target: target + TARGET_STEP })}
             className="tap grid place-items-center rounded-lg border border-slate-300 disabled:opacity-40"
@@ -107,11 +107,11 @@ export default function Me() {
         </div>
       </section>
 
-      <section aria-label="Valid day" className="mt-3 rounded-card bg-white p-4">
-        <h2 className="text-sm font-semibold text-slate-900">Entries for a complete day</h2>
+      <section aria-label="Día válido" className="mt-3 rounded-card bg-white p-4">
+        <h2 className="text-sm font-semibold text-slate-900">Registros para un día completo</h2>
         <p className="mt-1 text-xs text-slate-600">
-          Days with fewer than {settings.min_entries_for_valid_day} entries are shown as incomplete
-          instead of pass or fail.
+          Los días con menos de {settings.min_entries_for_valid_day} registros se muestran como
+          incompletos en lugar de cumplido o no cumplido.
         </p>
         <div className="mt-3 flex gap-1 rounded-lg bg-slate-100 p-1">
           {[1, 2, 3, 4, 5].map((value) => (
@@ -133,7 +133,7 @@ export default function Me() {
       </section>
 
       <p aria-live="polite" className="mt-2 h-4 text-xs text-slate-500">
-        {saved ? 'Saved' : ''}
+        {saved ? 'Guardado' : ''}
       </p>
       {error ? (
         <p role="alert" className="text-sm text-red-700">
@@ -141,13 +141,13 @@ export default function Me() {
         </p>
       ) : null}
 
-      <nav aria-label="More" className="mt-3 space-y-2">
+      <nav aria-label="Más" className="mt-3 space-y-2">
         <Link
           to="/rubric"
           className="tap flex w-full items-center gap-3 rounded-card bg-white px-4 text-sm font-medium text-slate-900"
         >
           <BookOpen className="size-5 text-slate-400" aria-hidden="true" />
-          How scores are decided
+          Cómo se decide el puntaje
         </Link>
 
         <button
@@ -157,7 +157,7 @@ export default function Me() {
           className="tap flex w-full items-center gap-3 rounded-card bg-white px-4 text-left text-sm font-medium text-slate-900 disabled:opacity-60"
         >
           <Download className="size-5 text-slate-400" aria-hidden="true" />
-          {exporting ? 'Preparing CSV…' : 'Export all entries (CSV)'}
+          {exporting ? 'Preparando el CSV…' : 'Exportar todos los registros (CSV)'}
         </button>
 
         {isAdmin ? (
@@ -167,9 +167,9 @@ export default function Me() {
           >
             <ShieldCheck className="size-5 text-slate-400" aria-hidden="true" />
             <span className="flex-1">
-              Administration
+              Administración
               <span className="block text-xs font-normal text-slate-500">
-                Users and prompts · no food data
+                Usuarios y prompts · sin datos de comida
               </span>
             </span>
           </Link>
@@ -181,7 +181,7 @@ export default function Me() {
           className="tap flex w-full items-center gap-3 rounded-card bg-white px-4 text-left text-sm font-medium text-slate-900"
         >
           <LogOut className="size-5 text-slate-400" aria-hidden="true" />
-          Log out
+          Cerrar sesión
         </button>
       </nav>
     </>

@@ -58,9 +58,9 @@ export default function Today() {
 
   return (
     <>
-      <ScreenHeader title="Today" subtitle={formatFullDate(today)} />
+      <ScreenHeader title="Hoy" subtitle={formatFullDate(today)} />
 
-      <section aria-label="Daily average" className="rounded-card bg-white p-4">
+      <section aria-label="Promedio del día" className="rounded-card bg-white p-4">
         {entries === null ? (
           <div className="h-20" />
         ) : (
@@ -69,9 +69,9 @@ export default function Today() {
               <ScoreAverage average={average} />
               <div className="text-sm text-slate-600">
                 <p>
-                  {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+                  {entries.length} {entries.length === 1 ? 'registro' : 'registros'}
                 </p>
-                <p>target {formatAverage(settings.daily_average_target)}</p>
+                <p>objetivo {formatAverage(settings.daily_average_target)}</p>
               </div>
             </div>
             {status ? <GoalState status={status} settings={settings} count={entries.length} /> : null}
@@ -86,14 +86,14 @@ export default function Today() {
       {entries !== null && entries.length === 0 && !error ? (
         <EmptyState
           icon={<Camera className="size-10" />}
-          title="Nothing logged today"
-          body="Log a dish and you will see how it affects your average."
+          title="Nada registrado hoy"
+          body="Registra un plato y verás cómo afecta tu promedio."
           action={
             <Link
               to="/log"
               className="tap flex w-full items-center justify-center rounded-lg bg-slate-900 font-semibold text-white"
             >
-              Log your first dish
+              Registra tu primer plato
             </Link>
           }
         />
@@ -125,7 +125,7 @@ function GoalState({
     return (
       <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-slate-500">
         <CircleDashed className="size-4" aria-hidden="true" />
-        Incomplete day — {count} of {settings.min_entries_for_valid_day} entries
+        Día incompleto — {count} de {settings.min_entries_for_valid_day} registros
       </p>
     )
   }
@@ -133,14 +133,14 @@ function GoalState({
     return (
       <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-score-p3-ink">
         <CheckCircle2 className="size-4" aria-hidden="true" />
-        On target ({formatScore(settings.daily_average_target)} or better)
+        En objetivo ({formatScore(settings.daily_average_target)} o mejor)
       </p>
     )
   }
   return (
     <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-score-m3-ink">
       <AlertCircle className="size-4" aria-hidden="true" />
-      Below target
+      Bajo objetivo
     </p>
   )
 }

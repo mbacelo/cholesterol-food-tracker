@@ -54,9 +54,9 @@ export default function Dashboard() {
 
   return (
     <>
-      <ScreenHeader title="Dashboard" />
+      <ScreenHeader title="Panel" />
 
-      <div role="radiogroup" aria-label="Period" className="flex gap-1 rounded-lg bg-slate-200 p-1">
+      <div role="radiogroup" aria-label="Período" className="flex gap-1 rounded-lg bg-slate-200 p-1">
         {PERIODS.map((period) => (
           <button
             key={period}
@@ -72,7 +72,7 @@ export default function Dashboard() {
               days === period ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
             }`}
           >
-            {period} days
+            {period} días
           </button>
         ))}
       </div>
@@ -89,17 +89,17 @@ export default function Dashboard() {
 
       {summary ? (
         <>
-          <section aria-label="Goal" className="mt-4 rounded-card bg-white p-4">
+          <section aria-label="Objetivo" className="mt-4 rounded-card bg-white p-4">
             <div className="flex items-baseline gap-3">
               <ScoreAverage average={summary.period.average} />
-              <p className="text-sm text-slate-600">target {formatAverage(summary.target)}</p>
+              <p className="text-sm text-slate-600">objetivo {formatAverage(summary.target)}</p>
             </div>
 
             {summary.period.meetsTarget === null ? (
               <p className="mt-3 text-sm text-slate-500">
                 {summary.period.loggedDays === 0
-                  ? `No entries in the last ${days} days.`
-                  : `No complete days yet — a day needs ${summary.min_entries_for_valid_day} entries to count.`}
+                  ? `Sin registros en los últimos ${days} días.`
+                  : `Todavía no hay días completos — un día necesita ${summary.min_entries_for_valid_day} registros para contar.`}
               </p>
             ) : (
               <p
@@ -114,35 +114,35 @@ export default function Dashboard() {
                 ) : (
                   <AlertCircle className="size-4" aria-hidden="true" />
                 )}
-                {summary.period.meetsTarget ? 'Meeting your goal' : 'Below your goal'}
+                {summary.period.meetsTarget ? 'Cumpliendo tu objetivo' : 'Por debajo de tu objetivo'}
               </p>
             )}
 
             <p className="mt-3 text-sm text-slate-700">
               <strong className="font-semibold">
-                {summary.period.daysOnTarget} of {summary.period.completeDays}
+                {summary.period.daysOnTarget} de {summary.period.completeDays}
               </strong>{' '}
-              complete days met your target.
+              días completos alcanzaron tu objetivo.
             </p>
             {summary.period.incompleteDays > 0 ? (
               <p className="mt-1 text-xs text-slate-500">
                 {summary.period.incompleteDays}{' '}
-                {summary.period.incompleteDays === 1 ? 'day had' : 'days had'} fewer than{' '}
-                {summary.min_entries_for_valid_day} entries and{' '}
-                {summary.period.incompleteDays === 1 ? 'is' : 'are'} counted as incomplete.
+                {summary.period.incompleteDays === 1 ? 'día tuvo' : 'días tuvieron'} menos de{' '}
+                {summary.min_entries_for_valid_day} registros y{' '}
+                {summary.period.incompleteDays === 1 ? 'se cuenta' : 'se cuentan'} como incompletos.
               </p>
             ) : null}
           </section>
 
           <ChartCard
-            title="Score over time"
-            summary={`Daily average over the last ${days} days. Period average ${formatAverage(
+            title="Puntaje a lo largo del tiempo"
+            summary={`Promedio diario de los últimos ${days} días. Promedio del período ${formatAverage(
               summary.period.average,
-            )}, target ${formatAverage(summary.target)}.`}
+            )}, objetivo ${formatAverage(summary.target)}.`}
           >
             {loggedDays < MIN_TREND_DAYS ? (
               <ThinData
-                message={`Log on ${MIN_TREND_DAYS} different days and your trend appears here (you have ${loggedDays}).`}
+                message={`Registra en ${MIN_TREND_DAYS} días distintos y tu tendencia aparecerá aquí (llevas ${loggedDays}).`}
               />
             ) : (
               <ResponsiveContainer width="100%" height={220}>
@@ -163,14 +163,14 @@ export default function Dashboard() {
                   />
                   <ReferenceLine y={summary.target} stroke="#475569" strokeDasharray="4 4">
                     <Label
-                      value={`target ${formatAverage(summary.target)}`}
+                      value={`objetivo ${formatAverage(summary.target)}`}
                       position="insideTopRight"
                       fontSize={10}
                       fill="#475569"
                     />
                   </ReferenceLine>
                   <Tooltip
-                    formatter={(value) => [formatAverage(typeof value === 'number' ? value : null), 'average']}
+                    formatter={(value) => [formatAverage(typeof value === 'number' ? value : null), 'promedio']}
                     labelFormatter={(label) => formatDayLabel(String(label))}
                   />
                   {/* connectNulls=false so unlogged days render as GAPS. A
@@ -190,12 +190,12 @@ export default function Dashboard() {
           </ChartCard>
 
           <ChartCard
-            title="Score distribution"
-            summary={`How many dishes landed at each score from -5 to +5. ${totalEntries} in total.`}
+            title="Distribución de puntajes"
+            summary={`Cuántos platos cayeron en cada puntaje de -5 a +5. ${totalEntries} en total.`}
           >
             {totalEntries < MIN_DISTRIBUTION_ENTRIES ? (
               <ThinData
-                message={`Log ${MIN_DISTRIBUTION_ENTRIES} dishes and the distribution appears here (you have ${totalEntries}).`}
+                message={`Registra ${MIN_DISTRIBUTION_ENTRIES} platos y la distribución aparecerá aquí (llevas ${totalEntries}).`}
               />
             ) : (
               <ResponsiveContainer width="100%" height={200}>
@@ -208,8 +208,8 @@ export default function Dashboard() {
                   <XAxis dataKey="score" tickFormatter={formatScore} tick={{ fontSize: 11 }} />
                   <YAxis allowDecimals={false} width={26} tick={{ fontSize: 11 }} />
                   <Tooltip
-                    formatter={(value) => [String(value ?? 0), 'dishes']}
-                    labelFormatter={(label) => `score ${formatScore(Number(label))}`}
+                    formatter={(value) => [String(value ?? 0), 'platos']}
+                    labelFormatter={(label) => `puntaje ${formatScore(Number(label))}`}
                   />
                   <Bar dataKey="count">
                     {/* Per-bar colours are the point: each bar carries its own
@@ -254,14 +254,14 @@ function ThinData({ message }: { message: string }) {
   return (
     <EmptyState
       icon={<LineChartIcon className="size-8" />}
-      title="Keep logging to see trends"
+      title="Sigue registrando para ver tendencias"
       body={message}
       action={
         <Link
           to="/log"
           className="tap flex w-full items-center justify-center rounded-lg bg-slate-900 text-sm font-semibold text-white"
         >
-          Log a dish
+          Registrar un plato
         </Link>
       }
     />

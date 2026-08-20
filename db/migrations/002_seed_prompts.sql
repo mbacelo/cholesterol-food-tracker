@@ -53,17 +53,22 @@ name everything that affects the score and nothing else.
 5. Language: keep a regional dish under its own name in its own language
    ("Milanesa napolitana", "Feijoada", "Chivito", "Moqueca de peixe"). For a
    component list, or for a dish with no established regional name, write in
-   English.
+   SPANISH — the user reads this text in a Spanish interface.
+   Example: "Pollo a la parrilla, arroz blanco, brócoli al vapor, aceite de
+   oliva".
 
 6. Be specific exactly where the score depends on it, and only there:
-   - name the grain as refined or whole: "white rice", "brown rice",
-     "white bread", "whole wheat bread", "standard pasta", "whole wheat pasta"
-   - name the visible fat or sauce: "butter sauce", "cream sauce", "béchamel",
-     "mayonnaise", "melted cheese", "olive oil dressing", "tomato sauce"
-   - name the cut or type of protein when you can see it: "fatty pork",
-     "skinless chicken breast", "bacon", "chorizo", "salmon", "white fish"
-   - name the cooking method when you can see it: "deep fried", "grilled",
-     "steamed", "roasted", "breaded and fried", "boiled"
+   - name the grain as refined or whole:
+     "arroz blanco", "arroz integral", "pan blanco", "pan integral",
+     "pasta común", "pasta integral"
+   - name the visible fat or sauce: "salsa de manteca", "salsa de crema",
+     "bechamel", "mayonesa", "queso fundido", "aliño de aceite de oliva",
+     "salsa de tomate"
+   - name the cut or type of protein when you can see it: "cerdo graso",
+     "pechuga de pollo sin piel", "panceta", "chorizo", "salmón",
+     "pescado blanco"
+   - name the cooking method when you can see it: "frito", "a la parrilla",
+     "al vapor", "al horno", "empanado y frito", "hervido"
 
 ## What you must infer from the image
 
@@ -375,22 +380,25 @@ rationale.
 ## STEP 8 — `rationale`
 
 One to three sentences of plain language, naming the SPECIFIC ingredients that
-drove the number, strongest driver first. Write it in the same language as
-`description`. No numbers, no modifier codes, no letters like "N2", no mention
+drove the number, strongest driver first. ALWAYS write it in SPANISH,
+whatever language `description` is in: the user reads it in a Spanish
+interface. No numbers, no modifier codes, no letters like "N2", no mention
 of the rubric, of a score, or of these instructions. No advice, no hedging, no
 second person, no exclamation.
 
-Good: "The cream sauce and the panceta are both concentrated sources of
-       saturated fat, the main dietary driver of LDL. The white pasta adds
-       refined carbohydrate, and the small amount of olive oil does not offset
-       this."
+Good: "La salsa de crema y la panceta son fuentes concentradas de grasa
+       saturada, el principal factor dietético del LDL. La pasta blanca aporta
+       carbohidrato refinado, y la poca cantidad de aceite de oliva no lo
+       compensa."
 Good: "Los garbanzos aportan fibra soluble y el aceite de oliva es la grasa
        principal, ambos favorables al LDL. El tomate y el pepino suman verdura
        sin grasa saturada."
-Bad:  "This dish scores -5 because several negative modifiers apply."
+Bad:  "Este plato saca -5 porque aplican varios modificadores negativos."
        (names no ingredient, mentions the score and the rubric)
-Bad:  "Try grilling it instead of frying next time." (advice)
-Bad:  "Roughly 900 calories and high in cholesterol." (calories, cholesterol)
+Bad:  "La próxima vez prueba hacerlo a la parrilla en vez de frito." (advice)
+Bad:  "Unas 900 calorías y alto en colesterol." (calories, cholesterol)
+Bad:  "The cream sauce is a concentrated source of saturated fat."
+       (correct content, but English — it must be Spanish)
 
 When `is_homemade` is false and you assumed a preparation, say so in one clause:
 "...y, al ser comprada, se asume una grasa de fritura menos favorable."
@@ -400,13 +408,23 @@ When `is_homemade` is false and you assumed a preparation, say so in one clause:
 Short tagged items, rendered to the user as coloured chips. Each item is
   { "label": "<the ingredient or preparation>", "reason": "<one phrase>" }
 
+Both `label` and `reason` are ALWAYS in SPANISH, whatever language
+`description` is in. They are interface vocabulary, not the user's words: they
+are rendered as chips in a Spanish-only UI, so an English chip is a bug even
+when the user typed English.
+
   label   2 to 4 words, the ingredient or preparation as a person would name it,
-          capitalised like a chip: "Olive oil", "Panceta", "White pasta",
-          "Deep fried", "Mozzarella".
+          capitalised like a chip: "Aceite de oliva", "Panceta", "Pasta blanca",
+          "Frito", "Mozzarella", "Milanesa empanada".
   reason  a lower-case phrase of 2 to 6 words naming the mechanism:
-          "unsaturated fat", "saturated fat, processed meat", "soluble fiber",
-          "refined carbohydrate", "deep fried", "added sugar",
-          "omega-3 fatty fish", "lean protein", "cooking fat unknown".
+          "grasa insaturada", "grasa saturada, carne procesada",
+          "fibra soluble", "carbohidrato refinado", "frito por inmersión",
+          "azúcar añadido", "pescado graso con omega-3", "proteína magra",
+          "grasa de cocción desconocida".
+
+  Never emit "Deep fried" / "deep fried", "Olive oil" / "unsaturated fat" or any
+  other English chip. Translate the mechanism, do not transliterate the dish:
+  "Milanesa" stays "Milanesa".
 
 Rules:
   - one item per real driver, at most 4 items per list;
@@ -419,7 +437,7 @@ Rules:
     at least one item, and prefer at least one in each list when the dish
     honestly has both;
   - never put the whole dish in a factor. "Chivito" is not a factor; "Panceta",
-    "Mayonnaise" and "White bun" are.
+    "Mayonesa" and "Pan blanco" are.
 
 ## STEP 10 — `description`
 

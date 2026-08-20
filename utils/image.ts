@@ -46,7 +46,7 @@ export interface CompressedImage {
 
 export async function compressImage(file: File): Promise<CompressedImage> {
   if (file.size > MAX_INPUT_BYTES) {
-    throw new ImageError('too_large', 'That image is too large to process.')
+    throw new ImageError('too_large', 'Esa imagen es demasiado grande para procesarla.')
   }
 
   const bitmap = await decode(file)
@@ -74,9 +74,9 @@ export async function compressImage(file: File): Promise<CompressedImage> {
       if (blob.size <= TARGET_MAX_BYTES) break
     }
 
-    if (!best) throw new ImageError('encode_failed', 'Could not process that photo.')
+    if (!best) throw new ImageError('encode_failed', 'No se pudo procesar esa foto.')
     if (best.blob.size > HARD_MAX_BYTES) {
-      throw new ImageError('too_large', 'That photo is too large even after compression.')
+      throw new ImageError('too_large', 'Esa foto sigue siendo muy grande incluso comprimida.')
     }
 
     const dataUrl = await blobToDataUrl(best.blob)
@@ -127,7 +127,7 @@ async function decode(file: File): Promise<Decoded> {
   } catch {
     // The realistic case is an iPhone HEIC picked from the gallery on a browser
     // that cannot decode it. That must read as an unsupported format, not a crash.
-    throw new ImageError('decode_failed', 'That photo format is not supported here.')
+    throw new ImageError('decode_failed', 'Ese formato de foto no es compatible.')
   }
 }
 
@@ -142,7 +142,7 @@ function draw(source: Decoded, maxEdge: number): { canvas: HTMLCanvasElement; wi
   canvas.width = width
   canvas.height = height
   const context = canvas.getContext('2d')
-  if (!context) throw new ImageError('encode_failed', 'Could not process that photo.')
+  if (!context) throw new ImageError('encode_failed', 'No se pudo procesar esa foto.')
   context.imageSmoothingEnabled = true
   context.imageSmoothingQuality = 'high'
   context.drawImage(source as CanvasImageSource, 0, 0, width, height)
@@ -154,7 +154,7 @@ function toJpeg(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
     canvas.toBlob(
       (blob) => {
         if (blob) resolve(blob)
-        else reject(new ImageError('encode_failed', 'Could not process that photo.'))
+        else reject(new ImageError('encode_failed', 'No se pudo procesar esa foto.'))
       },
       'image/jpeg',
       quality,
@@ -166,7 +166,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(new ImageError('encode_failed', 'Could not read that photo.'))
+    reader.onerror = () => reject(new ImageError('encode_failed', 'No se pudo leer esa foto.'))
     reader.readAsDataURL(blob)
   })
 }

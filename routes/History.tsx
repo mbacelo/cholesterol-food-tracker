@@ -89,7 +89,7 @@ export default function History() {
 
   return (
     <>
-      <ScreenHeader title="History" />
+      <ScreenHeader title="Historial" />
 
       <div className="relative">
         <Search
@@ -100,15 +100,15 @@ export default function History() {
           type="search"
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          placeholder="Search descriptions"
-          aria-label="Search descriptions"
+          placeholder="Buscar descripciones"
+          aria-label="Buscar descripciones"
           className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-9"
         />
         {input ? (
           <button
             type="button"
             onClick={() => setInput('')}
-            aria-label="Clear search"
+            aria-label="Limpiar búsqueda"
             className="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded text-slate-500"
           >
             <X className="size-4" aria-hidden="true" />
@@ -118,7 +118,7 @@ export default function History() {
 
       {searching && entries !== null ? (
         <p className="mt-2 text-sm text-slate-600">
-          {entries.length} {entries.length === 1 ? 'entry matches' : 'entries match'} “{query}”
+          {entries.length} {entries.length === 1 ? 'registro coincide' : 'registros coinciden'} con “{query}”
         </p>
       ) : null}
 
@@ -131,8 +131,8 @@ export default function History() {
       {entries !== null && entries.length === 0 && !error ? (
         <EmptyState
           icon={<HistoryIcon className="size-10" />}
-          title={searching ? `No entries match “${query}”` : 'Your history is empty'}
-          body={searching ? undefined : 'Logged dishes appear here, newest first.'}
+          title={searching ? `Ningún registro coincide con “${query}”` : 'Tu historial está vacío'}
+          body={searching ? undefined : 'Los platos que registres aparecen aquí, del más reciente al más antiguo.'}
         />
       ) : null}
 
@@ -170,7 +170,7 @@ export default function History() {
       <div ref={sentinel} className="h-8" />
       {loadingMore ? (
         <p className="flex justify-center py-2">
-          <Spinner label="Loading more" />
+          <Spinner label="Cargando más" />
         </p>
       ) : null}
       {error && entries !== null ? (
@@ -179,7 +179,7 @@ export default function History() {
           onClick={() => void loadPage(cursor, false)}
           className="tap w-full rounded-lg text-sm font-semibold text-slate-600"
         >
-          Could not load more · Retry
+          No se pudo cargar más · Reintentar
         </button>
       ) : null}
     </>

@@ -6,11 +6,11 @@ import { OfflineBanner } from './ui'
 import { hasDraft } from '@/routes/Log/captureStorage'
 
 const ITEMS = [
-  { to: '/today', label: 'Today', Icon: CalendarDays },
-  { to: '/history', label: 'History', Icon: History },
-  { to: '/log', label: 'Log', Icon: Plus, primary: true },
-  { to: '/dashboard', label: 'Dashboard', Icon: BarChart3 },
-  { to: '/me', label: 'Me', Icon: User },
+  { to: '/today', label: 'Hoy', Icon: CalendarDays },
+  { to: '/history', label: 'Historial', Icon: History },
+  { to: '/log', label: 'Registrar', Icon: Plus, primary: true },
+  { to: '/dashboard', label: 'Panel', Icon: BarChart3 },
+  { to: '/me', label: 'Perfil', Icon: User },
 ] as const
 
 /**
@@ -73,7 +73,7 @@ function DebugBanner() {
       className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-amber-400 px-3 py-1.5 text-xs font-semibold text-amber-950"
     >
       <FlaskConical className="size-3.5" aria-hidden="true" />
-      DEBUG SESSION · {state.user.email}
+      SESIÓN DEBUG · {state.user.email}
       {state.isAdmin ? ' · admin' : ''}
     </div>
   )
@@ -85,7 +85,7 @@ export function AppShell() {
       <DebugBanner />
       <OfflineBanner />
       <nav
-        aria-label="Main"
+        aria-label="Principal"
         className="hidden border-b border-slate-200 bg-white md:flex md:items-center md:gap-2 md:px-4 md:py-2"
       >
         <NavItems vertical />
@@ -97,7 +97,7 @@ export function AppShell() {
       </main>
 
       <nav
-        aria-label="Main"
+        aria-label="Principal"
         className="fixed inset-x-0 bottom-0 z-30 flex border-t border-slate-200 bg-white/95 pb-safe pt-1 backdrop-blur md:hidden"
       >
         <NavItems />

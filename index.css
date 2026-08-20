@@ -117,3 +117,29 @@
   min-height: 2.75rem;
   min-width: 2.75rem;
 }
+
+/* The analysing state on the Log screen.
+ *
+ * A band of light sweeping down the photo, so the two or three seconds a paid
+ * model call takes read as the app READING the image rather than as a page that
+ * has stalled. It is decorative: the live region carries the actual status.
+ */
+@keyframes scan {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(300%);
+  }
+}
+
+@utility animate-scan {
+  animation: scan 2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-scan {
+    animation: none;
+    opacity: 0;
+  }
+}

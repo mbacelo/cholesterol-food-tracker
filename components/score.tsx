@@ -40,7 +40,7 @@ export function ScoreBadge({
     return (
       <span
         aria-busy="true"
-        aria-label="scoring"
+        aria-label="calculando puntaje"
         className={`inline-flex animate-pulse items-center justify-center rounded-xl bg-slate-200 font-bold ${SIZES[size]}`}
       />
     )
@@ -48,7 +48,7 @@ export function ScoreBadge({
 
   return (
     <span
-      aria-label={`score ${score > 0 ? 'plus ' : score < 0 ? 'minus ' : ''}${Math.abs(score)} out of 5`}
+      aria-label={`puntaje ${score > 0 ? 'más ' : score < 0 ? 'menos ' : ''}${Math.abs(score)} de 5`}
       className={`inline-flex items-center justify-center gap-1 rounded-xl font-bold tabular-nums ${colors.solidBg} ${colors.onSolid} ${SIZES[size]}`}
     >
       {showIcon ? <Icon className="size-4" aria-hidden="true" /> : null}
@@ -131,7 +131,7 @@ export function HomemadeIcon({ isHomemade }: { isHomemade: boolean }) {
   return (
     <>
       <Icon className="size-4 shrink-0 text-slate-400" aria-hidden="true" />
-      <span className="sr-only">{isHomemade ? 'Homemade' : 'Bought'}</span>
+      <span className="sr-only">{isHomemade ? 'Casero' : 'Comprado'}</span>
     </>
   )
 }
@@ -183,9 +183,9 @@ export function EntryRow({ entry, highlight = false }: { entry: Entry; highlight
 }
 
 const STATUS_COPY: Record<DayStatus, string> = {
-  pass: 'On target',
-  miss: 'Below target',
-  incomplete: 'Incomplete',
+  pass: 'En objetivo',
+  miss: 'Bajo objetivo',
+  incomplete: 'Incompleto',
 }
 
 /** A day header for History: date, that day's average, and the entry count. */
@@ -209,12 +209,12 @@ export function DayHeader({
         // With a search active, the visible entries are a filtered subset, so a
         // "day average" beside them would be misleading.
         <span className="text-xs text-slate-500">
-          {count} {count === 1 ? 'match' : 'matches'}
+          {count} {count === 1 ? 'coincidencia' : 'coincidencias'}
         </span>
       ) : (
         <>
           <span className="text-xs text-slate-500">
-            {count} {count === 1 ? 'entry' : 'entries'}
+            {count} {count === 1 ? 'registro' : 'registros'}
           </span>
           <span className="ml-auto flex items-center gap-2">
             {status ? (

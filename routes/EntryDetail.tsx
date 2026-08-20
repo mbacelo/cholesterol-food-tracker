@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { ArrowLeft, ChefHat, ImageOff, Pencil, ShoppingBag, Trash2 } from 'lucide-react'
-import { ConfirmDialog, ErrorState, Skeleton } from '@/components/ui'
+import { ConfirmDialog, ErrorState, Skeleton, Spinner } from '@/components/ui'
 import { FactorLists, ScoreBadge } from '@/components/score'
 import { apiFetch, errorMessage } from '@/utils/api'
 import { MIN_ENTRY_DATE, formatFullDate, todayLocal } from '@/utils/localDate'
@@ -156,18 +156,18 @@ export default function EntryDetail() {
         <button
           type="button"
           onClick={() => navigate(-1)}
-          aria-label="Back"
+          aria-label="Volver"
           className="tap grid place-items-center rounded-lg text-slate-600"
         >
           <ArrowLeft className="size-5" aria-hidden="true" />
         </button>
-        <h1 className="flex-1 truncate text-lg font-bold text-slate-900">Entry</h1>
+        <h1 className="flex-1 truncate text-lg font-bold text-slate-900">Registro</h1>
         {!editing ? (
           <>
             <button
               type="button"
               onClick={openEdit}
-              aria-label="Edit"
+              aria-label="Editar"
               className="tap grid place-items-center rounded-lg text-slate-600"
             >
               <Pencil className="size-5" aria-hidden="true" />
@@ -175,7 +175,7 @@ export default function EntryDetail() {
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
-              aria-label="Delete"
+              aria-label="Eliminar"
               className="tap grid place-items-center rounded-lg text-red-600"
             >
               <Trash2 className="size-5" aria-hidden="true" />
@@ -196,7 +196,7 @@ export default function EntryDetail() {
         </div>
       )}
 
-      <section aria-label="Score" className="mt-4 rounded-card bg-white p-4">
+      <section aria-label="Puntaje" className="mt-4 rounded-card bg-white p-4">
         <div className="flex items-center gap-3">
           <ScoreBadge score={entry.score} size="xl" showIcon />
           <div className="flex-1">
@@ -207,7 +207,7 @@ export default function EntryDetail() {
               ) : (
                 <ShoppingBag className="size-3.5" aria-hidden="true" />
               )}
-              {entry.is_homemade ? 'Homemade' : 'Bought'} · {formatFullDate(entry.entry_date)}
+              {entry.is_homemade ? 'Casero' : 'Comprado'} · {formatFullDate(entry.entry_date)}
             </p>
           </div>
         </div>
@@ -217,9 +217,9 @@ export default function EntryDetail() {
       </section>
 
       {editing ? (
-        <section aria-label="Edit" className="mt-4 space-y-4 rounded-card bg-white p-4">
+        <section aria-label="Editar" className="mt-4 space-y-4 rounded-card bg-white p-4">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">Description</span>
+            <span className="text-sm font-medium text-slate-700">Descripción</span>
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value.slice(0, 200))}
@@ -240,11 +240,11 @@ export default function EntryDetail() {
               <ShoppingBag className="size-5 text-slate-600" aria-hidden="true" />
             )}
             <span className="flex-1 text-sm font-medium">
-              {isHomemade ? 'Made at home' : 'Bought or eaten out'}
+              {isHomemade ? 'Hecho en casa' : 'Comprado o comido fuera'}
             </span>
           </button>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">Date</span>
+            <span className="text-sm font-medium text-slate-700">Fecha</span>
             <input
               type="date"
               value={entryDate}
@@ -257,7 +257,7 @@ export default function EntryDetail() {
 
           {rescoreChanged ? (
             <p className="text-xs text-slate-500">
-              Changing the description or the homemade setting re-scores the entry.
+              Cambiar la descripción o si es casero recalcula el puntaje del registro.
             </p>
           ) : null}
 
@@ -272,16 +272,25 @@ export default function EntryDetail() {
               type="button"
               disabled={busy || description.trim().length === 0}
               onClick={() => void apply()}
-              className="tap w-full rounded-lg bg-slate-900 font-semibold text-white disabled:opacity-50"
+              className="tap flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 font-semibold text-white disabled:opacity-50"
             >
-              {busy ? 'Working…' : rescoreChanged ? 'Re-score' : 'Apply'}
+              {/* The button's own text is the status, so the spinner beside it
+                  is decorative -- otherwise it is announced twice. */}
+              {busy ? <Spinner label={null} className="text-white" /> : null}
+              {busy
+                ? rescoreChanged
+                  ? 'Calculando el puntaje…'
+                  : 'Guardando…'
+                : rescoreChanged
+                  ? 'Recalcular puntaje'
+                  : 'Aplicar'}
             </button>
             <button
               type="button"
               onClick={cancelEdit}
               className="tap w-full rounded-lg text-sm font-semibold text-slate-600"
             >
-              Cancel
+              Cancelar
             </button>
           </div>
         </section>
@@ -291,9 +300,9 @@ export default function EntryDetail() {
           or cancel, but cannot alter it. */}
       <ConfirmDialog
         open={preview !== null}
-        title="New score"
+        title="Puntaje nuevo"
         pending={busy}
-        confirmLabel="Keep this score"
+        confirmLabel="Conservar este puntaje"
         body={
           preview ? (
             <div>
@@ -316,9 +325,9 @@ export default function EntryDetail() {
 
       <ConfirmDialog
         open={confirmDelete}
-        title="Delete this entry?"
-        body="The photo is deleted too. This cannot be undone."
-        confirmLabel="Delete"
+        title="¿Eliminar este registro?"
+        body="También se elimina la foto. Esto no se puede deshacer."
+        confirmLabel="Eliminar"
         destructive
         pending={busy}
         onConfirm={() => void destroy()}

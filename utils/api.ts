@@ -28,22 +28,22 @@ export type ApiErrorCode =
   | 'offline'
 
 export const ERROR_COPY: Record<ApiErrorCode, string> = {
-  bad_request: 'Something about that request was not valid.',
-  unauthorized: 'Your session expired. Sign in again.',
-  not_authorized: 'This Google account is not on the invitation list.',
-  forbidden: 'You do not have access to that.',
-  not_found: 'That is no longer there.',
-  method_not_allowed: 'Something about that request was not valid.',
-  payload_too_large: 'That photo is too large even after compression. Try again.',
-  conflict: 'That changed while you were looking at it. Reload and try again.',
-  rate_limited: 'That is a lot of requests at once. Wait a moment and retry.',
-  quota_exceeded: 'You have reached today’s analysis limit. Try again tomorrow.',
-  nothing_to_revert: 'There is no previous version to restore.',
-  no_food_detected: 'I could not identify food in that photo.',
-  ai_unavailable: 'Scoring is unavailable right now. Try again in a moment.',
-  misconfigured: 'The app is not fully configured. Check the server settings.',
-  internal_error: 'Something went wrong on our side.',
-  offline: 'You are offline. Logging needs a connection.',
+  bad_request: 'Algo de esa solicitud no era válido.',
+  unauthorized: 'Tu sesión expiró. Inicia sesión de nuevo.',
+  not_authorized: 'Esta cuenta de Google no está en la lista de invitados.',
+  forbidden: 'No tienes acceso a eso.',
+  not_found: 'Eso ya no está.',
+  method_not_allowed: 'Algo de esa solicitud no era válido.',
+  payload_too_large: 'Esa foto sigue siendo muy grande incluso comprimida. Inténtalo de nuevo.',
+  conflict: 'Eso cambió mientras lo mirabas. Recarga e inténtalo de nuevo.',
+  rate_limited: 'Demasiadas solicitudes seguidas. Espera un momento y reinténtalo.',
+  quota_exceeded: 'Llegaste al límite de análisis de hoy. Inténtalo de nuevo mañana.',
+  nothing_to_revert: 'No hay una versión anterior para restaurar.',
+  no_food_detected: 'No pude identificar comida en esa foto.',
+  ai_unavailable: 'El puntaje no está disponible ahora. Inténtalo en un momento.',
+  misconfigured: 'La app no está del todo configurada. Revisa los ajustes del servidor.',
+  internal_error: 'Algo salió mal de nuestro lado.',
+  offline: 'Estás sin conexión. Para registrar necesitas conexión.',
 }
 
 export class ApiError extends Error {

@@ -6,10 +6,23 @@ import { AlertCircle, Loader2, RefreshCw, WifiOff, X } from 'lucide-react'
  * invent their own empty, loading and error rendering.
  */
 
-export function Spinner({ label = 'Loading' }: { label?: string }) {
+/**
+ * `label={null}` is for a spinner sitting INSIDE something that already
+ * announces itself -- a live region, or a button whose text changes. Two nested
+ * role="status" nodes make a screen reader say it twice.
+ */
+export function Spinner({
+  label = 'Cargando',
+  className = 'text-slate-400',
+}: {
+  label?: string | null
+  className?: string
+}) {
+  const icon = <Loader2 className={`size-5 animate-spin ${className}`} aria-hidden="true" />
+  if (label === null) return icon
   return (
     <span role="status" aria-label={label} className="inline-flex items-center">
-      <Loader2 className="size-5 animate-spin text-slate-400" aria-hidden="true" />
+      {icon}
     </span>
   )
 }
@@ -76,7 +89,7 @@ export function ErrorState({
           className="tap mt-3 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 text-sm font-semibold text-white"
         >
           <RefreshCw className="size-4" aria-hidden="true" />
-          Try again
+          Reintentar
         </button>
       ) : null}
     </div>
@@ -103,7 +116,7 @@ export function OfflineBanner() {
       className="flex items-center justify-center gap-2 bg-slate-800 px-3 py-1.5 text-xs font-medium text-white"
     >
       <WifiOff className="size-3.5" aria-hidden="true" />
-      You are offline. Logging needs a connection.
+      Estás sin conexión. Para registrar necesitas conexión.
     </div>
   )
 }
@@ -119,7 +132,7 @@ export function ConfirmDialog({
   open,
   title,
   body,
-  confirmLabel = 'Confirm',
+  confirmLabel = 'Confirmar',
   destructive = false,
   requireText,
   pending = false,
@@ -176,7 +189,7 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onCancel}
-            aria-label="Close"
+            aria-label="Cerrar"
             className="tap -mr-2 -mt-2 grid place-items-center rounded-lg text-slate-500"
           >
             <X className="size-5" aria-hidden="true" />
@@ -187,7 +200,7 @@ export function ConfirmDialog({
         {requireText !== undefined ? (
           <label className="mt-4 block text-sm">
             <span className="text-slate-700">
-              Type <span className="font-mono font-semibold">{requireText}</span> to confirm
+              Escribe <span className="font-mono font-semibold">{requireText}</span> para confirmar
             </span>
             <input
               value={typed}
@@ -203,18 +216,19 @@ export function ConfirmDialog({
             type="button"
             disabled={blocked || pending}
             onClick={onConfirm}
-            className={`tap w-full rounded-lg px-4 font-semibold text-white disabled:opacity-50 ${
+            className={`tap flex w-full items-center justify-center gap-2 rounded-lg px-4 font-semibold text-white disabled:opacity-50 ${
               destructive ? 'bg-red-600' : 'bg-slate-900'
             }`}
           >
-            {pending ? 'Working…' : confirmLabel}
+            {pending ? <Spinner label={null} className="text-white" /> : null}
+            {pending ? 'Procesando…' : confirmLabel}
           </button>
           <button
             type="button"
             onClick={onCancel}
             className="tap w-full rounded-lg px-4 font-semibold text-slate-700"
           >
-            Cancel
+            Cancelar
           </button>
         </div>
       </div>

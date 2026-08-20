@@ -16,19 +16,19 @@ export function AdminLayout() {
   return (
     <>
       <header className="flex items-center gap-2 py-3">
-        <Link to="/me" aria-label="Back" className="tap grid place-items-center rounded-lg text-slate-600">
+        <Link to="/me" aria-label="Volver" className="tap grid place-items-center rounded-lg text-slate-600">
           <ArrowLeft className="size-5" aria-hidden="true" />
         </Link>
-        <h1 className="text-xl font-bold text-slate-900">Administration</h1>
+        <h1 className="text-xl font-bold text-slate-900">Administración</h1>
       </header>
 
       <p className="rounded-card bg-slate-100 px-3 py-2 text-xs text-slate-600">
-        This area contains no food data. Entry counts are shown; entry contents never are.
+        Esta sección no contiene datos de comida. Se muestra la cantidad de registros; nunca su contenido.
       </p>
 
-      <nav aria-label="Admin sections" className="mt-3 flex gap-1 rounded-lg bg-slate-200 p-1">
+      <nav aria-label="Secciones de administración" className="mt-3 flex gap-1 rounded-lg bg-slate-200 p-1">
         {[
-          { to: '/admin/users', label: 'Users' },
+          { to: '/admin/users', label: 'Usuarios' },
           { to: '/admin/prompts', label: 'Prompts' },
         ].map((tab) => (
           <NavLink
@@ -119,8 +119,8 @@ export function AdminUsers() {
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          placeholder="person@example.com"
-          aria-label="Email to invite"
+          placeholder="persona@ejemplo.com"
+          aria-label="Correo para invitar"
           className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2"
         />
         <button
@@ -129,7 +129,7 @@ export function AdminUsers() {
           className="tap flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white disabled:opacity-50"
         >
           <UserPlus className="size-4" aria-hidden="true" />
-          Invite
+          Invitar
         </button>
       </form>
 
@@ -137,7 +137,7 @@ export function AdminUsers() {
       {rows === null && !error ? <SkeletonList rows={3} /> : null}
 
       {rows !== null && rows.length === 0 ? (
-        <p className="mt-6 text-center text-sm text-slate-500">No one is invited yet.</p>
+        <p className="mt-6 text-center text-sm text-slate-500">Todavía no hay nadie invitado.</p>
       ) : null}
 
       <ul className="mt-3 space-y-2">
@@ -163,7 +163,7 @@ export function AdminUsers() {
                 }
                 className="tap rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700"
               >
-                {row.blocked ? 'Unblock' : 'Block'}
+                {row.blocked ? 'Desbloquear' : 'Bloquear'}
               </button>
               <button
                 type="button"
@@ -177,7 +177,7 @@ export function AdminUsers() {
                 }
                 className="tap rounded-lg border border-amber-300 px-3 text-xs font-semibold text-amber-800"
               >
-                Remove from list
+                Quitar de la lista
               </button>
               {row.has_signed_in ? (
                 <button
@@ -187,7 +187,7 @@ export function AdminUsers() {
                   className="tap flex items-center gap-1 rounded-lg border border-red-300 px-3 text-xs font-semibold text-red-700"
                 >
                   <Trash2 className="size-3.5" aria-hidden="true" />
-                  Delete user and data
+                  Eliminar usuario y datos
                 </button>
               ) : null}
             </div>
@@ -197,19 +197,19 @@ export function AdminUsers() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title="Delete this user and all their data?"
+        title="¿Eliminar este usuario y todos sus datos?"
         destructive
         requireText={deleting?.email}
-        confirmLabel="Delete permanently"
+        confirmLabel="Eliminar definitivamente"
         pending={busy}
         body={
           deleting ? (
             <p>
-              This permanently deletes{' '}
+              Esto elimina definitivamente{' '}
               <strong className="font-semibold">
-                {deleting.count} {deleting.count === 1 ? 'entry' : 'entries'}
+                {deleting.count} {deleting.count === 1 ? 'registro' : 'registros'}
               </strong>{' '}
-              and their photos. Entry contents are never shown here. This cannot be undone.
+              y sus fotos. El contenido de los registros nunca se muestra aquí. Esto no se puede deshacer.
             </p>
           ) : null
         }
@@ -235,7 +235,7 @@ function StatusChip({ row }: { row: AllowlistRow }) {
     return (
       <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800">
         <Ban className="size-3" aria-hidden="true" />
-        Blocked
+        Bloqueado
       </span>
     )
   }
@@ -243,14 +243,14 @@ function StatusChip({ row }: { row: AllowlistRow }) {
     return (
       <span className="flex items-center gap-1 rounded-full bg-score-p2-soft px-2 py-0.5 text-xs font-semibold text-score-p2-ink">
         <CheckCircle2 className="size-3" aria-hidden="true" />
-        Active
+        Activo
       </span>
     )
   }
   return (
     <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
       <MoreVertical className="size-3" aria-hidden="true" />
-      Invited
+      Invitado
     </span>
   )
 }
@@ -297,7 +297,7 @@ export function AdminPrompts() {
   return (
     <>
       <p className="rounded-card bg-amber-50 px-3 py-2 text-xs text-amber-900">
-        Saving affects future analyses only. Existing entries keep their scores.
+        Guardar afecta solo a los análisis futuros. Los registros existentes conservan su puntaje.
       </p>
 
       <div className="mt-3 flex gap-1 rounded-lg bg-slate-200 p-1">
@@ -315,7 +315,7 @@ export function AdminPrompts() {
               active === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
             }`}
           >
-            {key === 'scoring_prompt' ? 'Scoring' : 'Image analysis'}
+            {key === 'scoring_prompt' ? 'Puntaje' : 'Análisis de imagen'}
           </button>
         ))}
       </div>
@@ -325,18 +325,18 @@ export function AdminPrompts() {
       {current ? (
         <>
           <p className="mt-3 text-xs text-slate-500">
-            version {current.version}
-            {current.updated_by ? ` · last edited by ${current.updated_by}` : ''}
+            versión {current.version}
+            {current.updated_by ? ` · última edición de ${current.updated_by}` : ''}
           </p>
           <textarea
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             rows={20}
             spellCheck={false}
-            aria-label="Prompt body"
+            aria-label="Cuerpo del prompt"
             className="mt-2 w-full rounded-lg border border-slate-300 p-3 font-mono text-xs"
           />
-          <p className="mt-1 text-right text-xs text-slate-400">{draft.length} characters</p>
+          <p className="mt-1 text-right text-xs text-slate-400">{draft.length} caracteres</p>
 
           <div className="mt-3 flex flex-col gap-2">
             <button
@@ -354,7 +354,7 @@ export function AdminPrompts() {
               }}
               className="tap w-full rounded-lg bg-slate-900 font-semibold text-white disabled:opacity-50"
             >
-              {busy ? 'Saving…' : 'Save'}
+              {busy ? 'Guardando…' : 'Guardar'}
             </button>
             <button
               type="button"
@@ -362,7 +362,7 @@ export function AdminPrompts() {
               onClick={() => setConfirmRevert(true)}
               className="tap w-full rounded-lg border border-slate-300 text-sm font-semibold text-slate-700 disabled:opacity-50"
             >
-              Revert to previous version
+              Volver a la versión anterior
             </button>
             {dirty ? (
               <button
@@ -370,7 +370,7 @@ export function AdminPrompts() {
                 onClick={() => setDraft(current.body)}
                 className="tap w-full rounded-lg text-sm font-semibold text-slate-600"
               >
-                Discard changes
+                Descartar cambios
               </button>
             ) : null}
           </div>
@@ -379,9 +379,9 @@ export function AdminPrompts() {
 
       <ConfirmDialog
         open={confirmRevert}
-        title="Restore the previous version?"
-        body="Your current text will be replaced by the version saved before it."
-        confirmLabel="Revert"
+        title="¿Restaurar la versión anterior?"
+        body="Tu texto actual será reemplazado por la versión guardada antes."
+        confirmLabel="Restaurar"
         pending={busy}
         onConfirm={() => {
           setBusy(true)

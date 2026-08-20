@@ -108,12 +108,12 @@ describe('formatDayLabel', () => {
   const now = new Date(2026, 7, 19, 12, 0)
 
   it('names today and yesterday', () => {
-    expect(formatDayLabel('2026-08-19', now)).toBe('Today')
-    expect(formatDayLabel('2026-08-18', now)).toBe('Yesterday')
+    expect(formatDayLabel('2026-08-19', now)).toBe('Hoy')
+    expect(formatDayLabel('2026-08-18', now)).toBe('Ayer')
   })
 
   it('falls back to a readable date', () => {
-    expect(formatDayLabel('2026-08-10', now)).not.toMatch(/Today|Yesterday/)
+    expect(formatDayLabel('2026-08-10', now)).not.toMatch(/Hoy|Ayer/)
     expect(formatDayLabel('2026-08-10', now).length).toBeGreaterThan(0)
   })
 })

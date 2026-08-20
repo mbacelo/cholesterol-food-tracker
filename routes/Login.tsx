@@ -78,31 +78,31 @@ export default function Login() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col items-center justify-center px-6 text-center">
-      <h1 className="text-2xl font-bold text-slate-900">Cholesterol Food Tracker</h1>
+      <h1 className="text-2xl font-bold text-slate-900">Registro de Colesterol</h1>
       <p className="mt-2 text-sm text-slate-600">
-        Log a dish, see its likely effect on your LDL, and track it against your goal.
+        Registra un plato, mira su efecto probable en tu LDL y sigue tu objetivo.
       </p>
 
       {state.status === 'anonymous' && state.reason === 'expired' ? (
         <p role="status" className="mt-4 text-sm text-amber-800">
-          Your session expired. Sign in again — any dish you were reviewing is still here.
+          Tu sesión expiró. Inicia sesión de nuevo — el plato que estabas revisando sigue aquí.
         </p>
       ) : null}
 
       <div className="mt-8">
-        {busy ? <Spinner label="Signing in" /> : <div ref={buttonRef} />}
+        {busy ? <Spinner label="Iniciando sesión" /> : <div ref={buttonRef} />}
       </div>
 
       {!clientId ? (
         <p className="mt-6 text-sm text-red-700">
-          VITE_GOOGLE_CLIENT_ID is not set, so sign-in cannot be shown. For local development, set
-          DEBUG_AUTH=true in .env.local instead.
+          VITE_GOOGLE_CLIENT_ID no está configurado, así que no se puede mostrar el inicio de
+          sesión. Para desarrollo local, usa DEBUG_AUTH=true en .env.local.
         </p>
       ) : null}
 
       {error ? <ErrorState message={error} /> : null}
 
-      <p className="mt-10 text-xs text-slate-500">Access is by invitation.</p>
+      <p className="mt-10 text-xs text-slate-500">El acceso es por invitación.</p>
     </main>
   )
 }
@@ -111,10 +111,10 @@ export function NotAuthorized() {
   const { signOut } = useSession()
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col items-center justify-center px-6 text-center">
-      <h1 className="text-xl font-bold text-slate-900">Not authorized</h1>
+      <h1 className="text-xl font-bold text-slate-900">Sin autorización</h1>
       <p className="mt-2 text-sm text-slate-600">
-        This Google account is not on the invitation list. If you think it should be, ask the
-        person who runs this app to add it.
+        Esta cuenta de Google no está en la lista de invitados. Si crees que debería estar,
+        pídele a la persona que administra la app que la agregue.
       </p>
       <button
         type="button"
@@ -124,7 +124,7 @@ export function NotAuthorized() {
         }}
         className="tap mt-8 rounded-lg bg-slate-900 px-6 font-semibold text-white"
       >
-        Use a different account
+        Usar otra cuenta
       </button>
     </main>
   )

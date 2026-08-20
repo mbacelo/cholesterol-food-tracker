@@ -38,7 +38,7 @@ function RequireSession() {
     case 'loading':
       return (
         <div className="grid min-h-dvh place-items-center">
-          <Spinner label="Loading your account" />
+          <Spinner label="Cargando tu cuenta" />
         </div>
       )
     case 'anonymous':
@@ -90,7 +90,7 @@ export default function App() {
               <Suspense
                 fallback={
                   <div className="grid min-h-64 place-items-center">
-                    <Spinner label="Loading charts" />
+                    <Spinner label="Cargando gráficos" />
                   </div>
                 }
               >

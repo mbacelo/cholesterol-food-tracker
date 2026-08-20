@@ -65,14 +65,20 @@ export function periodStartLocal(days: 7 | 30 | 90, now: Date = new Date()): str
 
 export const MIN_ENTRY_DATE = '2020-01-01'
 
-/** "Today", "Yesterday", or a short readable date. */
+/**
+ * The UI is Spanish-only, so dates are formatted in Spanish rather than in the
+ * browser's locale: a device set to English must not render half a screen in it.
+ */
+const UI_LOCALE = 'es'
+
+/** "Hoy", "Ayer", or a short readable date. */
 export function formatDayLabel(ymd: string, now: Date = new Date()): string {
   const today = todayLocal(now)
-  if (ymd === today) return 'Today'
-  if (ymd === addDaysLocal(today, -1)) return 'Yesterday'
+  if (ymd === today) return 'Hoy'
+  if (ymd === addDaysLocal(today, -1)) return 'Ayer'
   const date = parseLocalDate(ymd)
   const sameYear = date.getFullYear() === now.getFullYear()
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString(UI_LOCALE, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -81,7 +87,7 @@ export function formatDayLabel(ymd: string, now: Date = new Date()): string {
 }
 
 export function formatFullDate(ymd: string): string {
-  return parseLocalDate(ymd).toLocaleDateString(undefined, {
+  return parseLocalDate(ymd).toLocaleDateString(UI_LOCALE, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',

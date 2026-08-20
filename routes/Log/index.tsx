@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Camera, ChefHat, Images, PenLine, RotateCcw, ShoppingBag } from 'lucide-react'
 import { ScreenHeader } from '@/components/shell'
-import { ConfirmDialog, ErrorState, Spinner } from '@/components/ui'
+import { ConfirmDialog, ErrorState, Skeleton, Spinner } from '@/components/ui'
 import { FactorLists, ScoreBadge } from '@/components/score'
 import { apiFetch, errorMessage } from '@/utils/api'
 import { compressImage, ImageError } from '@/utils/image'
@@ -32,7 +32,10 @@ import {
 type Phase =
   | { kind: 'idle' }
   | { kind: 'compressing' }
-  | { kind: 'analyzing' }
+  // `mode` only picks the wording and the scan overlay: reading a photo and
+  // re-scoring typed text are the same call, but they do not look the same to
+  // someone waiting on them.
+  | { kind: 'analyzing'; mode: 'image' | 'score' }
   | { kind: 'review' }
   | { kind: 'saving' }
   | { kind: 'error'; message: string }
@@ -153,7 +156,7 @@ export default function Log() {
         // not lose the photo.
         if (!saveImage(stored)) setImageVolatile(true)
 
-        setPhase({ kind: 'analyzing' })
+        setPhase({ kind: 'analyzing', mode: 'image' })
         await runAnalysis('', isHomemade, stored)
         setPhase({ kind: 'review' })
       } catch (err) {
@@ -172,7 +175,10 @@ export default function Log() {
   const canAnalyze = description.trim().length > 0 || image !== null
 
   const analyzeNow = useCallback(async () => {
-    setPhase({ kind: 'analyzing' })
+    // With no description yet, the photo is what is being read -- same call, but
+    // "Analizando imagen…" is what is actually happening.
+    const mode = description.trim().length === 0 && image !== null ? 'image' : 'score'
+    setPhase({ kind: 'analyzing', mode })
     try {
       await runAnalysis(description, isHomemade, image)
       setPhase({ kind: 'review' })
@@ -212,17 +218,17 @@ export default function Log() {
   if (phase.kind === 'idle') {
     return (
       <>
-        <ScreenHeader title="Log a dish" subtitle="Nothing is saved until you tap Save." />
+        <ScreenHeader title="Registrar un plato" subtitle="No se guarda nada hasta que toques Guardar." />
         <div className="mt-4 space-y-3">
-          <FilePicker label="Take photo" Icon={Camera} capture onPick={pickFile} />
-          <FilePicker label="Choose from gallery" Icon={Images} onPick={pickFile} />
+          <FilePicker label="Sacar foto" Icon={Camera} capture onPick={pickFile} />
+          <FilePicker label="Elegir de la galería" Icon={Images} onPick={pickFile} />
           <button
             type="button"
             onClick={startTyped}
             className="tap flex w-full items-center justify-center gap-2 rounded-card border border-slate-300 bg-white px-4 font-semibold text-slate-900"
           >
             <PenLine className="size-5" aria-hidden="true" />
-            Type it
+            Escribirlo
           </button>
         </div>
       </>
@@ -230,24 +236,68 @@ export default function Log() {
   }
 
   if (phase.kind === 'compressing' || phase.kind === 'analyzing' || phase.kind === 'saving') {
+    const readingImage = phase.kind === 'analyzing' && phase.mode === 'image'
     const copy =
       phase.kind === 'compressing'
-        ? 'Preparing photo…'
+        ? 'Preparando la foto…'
         : phase.kind === 'analyzing'
-          ? 'Scoring this dish…'
-          : 'Saving…'
+          ? readingImage
+            ? 'Analizando imagen…'
+            : 'Calculando el puntaje…'
+          : 'Guardando…'
     return (
       <>
-        <ScreenHeader title="Log a dish" />
-        <div role="status" aria-live="polite" className="mt-6 flex flex-col items-center gap-3">
+        <ScreenHeader title="Registrar un plato" />
+
+        {/* One live region for the whole state. The spinners inside are
+            decorative (label={null}) so it is announced once, not three times. */}
+        <div role="status" aria-live="polite" aria-busy="true" className="mt-1">
           {image ? (
-            <img src={image.dataUrl} alt="" className="max-h-56 rounded-card object-cover" />
-          ) : null}
-          <p className="flex items-center gap-2 text-sm text-slate-600">
-            <Spinner /> {copy}
-          </p>
+            <figure className="relative overflow-hidden rounded-card bg-slate-200">
+              <img src={image.dataUrl} alt="" className="max-h-64 w-full object-cover" />
+              {readingImage ? (
+                <span
+                  aria-hidden="true"
+                  className="animate-scan absolute inset-x-0 top-0 h-1/3 bg-linear-to-b from-transparent via-white/55 to-transparent"
+                />
+              ) : null}
+              {/* On the photo rather than under it: the caption is about THIS
+                  image, and the gradient keeps white text legible on any dish. */}
+              <figcaption className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-linear-to-t from-slate-950/80 via-slate-950/45 to-transparent px-4 pb-3 pt-10 text-sm font-semibold text-white">
+                <Spinner label={null} className="text-white" />
+                {copy}
+              </figcaption>
+            </figure>
+          ) : (
+            <p className="flex items-center gap-2 rounded-card bg-white p-4 text-sm font-medium text-slate-700">
+              <Spinner label={null} />
+              {copy}
+            </p>
+          )}
+
+          {/* The shape of the answer, in the place the answer will appear. A
+              lone spinner says "wait"; this says what is being waited for. */}
           {phase.kind === 'analyzing' ? (
-            <p className="text-xs text-slate-400">Usually a few seconds.</p>
+            <>
+              <div className="mt-4 rounded-card bg-white p-4">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="size-16 shrink-0 rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-11/12" />
+                    <Skeleton className="h-3 w-2/3" />
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  <Skeleton className="h-7 w-28 rounded-lg" />
+                  <Skeleton className="h-7 w-20 rounded-lg" />
+                  <Skeleton className="h-7 w-24 rounded-lg" />
+                </div>
+              </div>
+              <p className="mt-3 text-center text-xs text-slate-400">
+                Suele tardar unos segundos.
+              </p>
+            </>
           ) : null}
         </div>
       </>
@@ -257,14 +307,14 @@ export default function Log() {
   if (phase.kind === 'error') {
     return (
       <>
-        <ScreenHeader title="Log a dish" />
+        <ScreenHeader title="Registrar un plato" />
         <ErrorState message={phase.message} onRetry={() => setPhase({ kind: 'review' })} />
         <button
           type="button"
           onClick={discard}
           className="tap mt-3 w-full rounded-lg text-sm font-semibold text-slate-600"
         >
-          Start over
+          Empezar de nuevo
         </button>
       </>
     )
@@ -274,28 +324,28 @@ export default function Log() {
 
   return (
     <>
-      <ScreenHeader title="Review" subtitle="You describe the food; the app decides the score." />
+      <ScreenHeader title="Revisar" subtitle="Tú describes la comida; la app decide el puntaje." />
 
       {image ? (
         <img src={image.dataUrl} alt="" className="mt-1 max-h-56 w-full rounded-card object-cover" />
       ) : null}
       {imageVolatile ? (
         <p className="mt-2 text-xs text-amber-700">
-          This photo will not survive a page refresh (storage is full).
+          Esta foto no sobrevivirá a una recarga de la página (el almacenamiento está lleno).
         </p>
       ) : null}
 
       {noFood ? (
         <div role="status" className="mt-4 rounded-card border border-amber-200 bg-amber-50 p-3">
           <p className="text-sm text-amber-900">
-            I could not identify food in this photo. Describe the dish and I will score it — the
-            photo stays attached.
+            No pude identificar comida en esta foto. Describe el plato y le calcularé el puntaje
+            — la foto queda adjunta.
           </p>
         </div>
       ) : null}
 
       {analysis && analysis.food_detected ? (
-        <section aria-label="Score" className="mt-4 rounded-card bg-white p-4">
+        <section aria-label="Puntaje" className="mt-4 rounded-card bg-white p-4">
           <div className="flex items-center gap-3">
             <ScoreBadge score={analysis.score} size="xl" showIcon />
             <p className="flex-1 text-sm text-slate-700">{analysis.rationale}</p>
@@ -306,7 +356,7 @@ export default function Log() {
           />
           {dirty ? (
             <p role="status" className="mt-3 text-sm text-amber-700">
-              This score is for the previous wording. Tap Re-score to update it.
+              Este puntaje corresponde al texto anterior. Toca Recalcular para actualizarlo.
             </p>
           ) : null}
         </section>
@@ -314,7 +364,7 @@ export default function Log() {
 
       <div className="mt-4 space-y-4 rounded-card bg-white p-4">
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Description</span>
+          <span className="text-sm font-medium text-slate-700">Descripción</span>
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value.slice(0, 200))}
@@ -322,7 +372,7 @@ export default function Log() {
             maxLength={200}
             enterKeyHint="done"
             autoCapitalize="sentences"
-            placeholder="Tagliatelle with pesto, or the main ingredients"
+            placeholder="Tallarines con pesto, o los ingredientes principales"
             className="mt-1 w-full rounded-lg border border-slate-300 p-3"
           />
           <span
@@ -346,13 +396,13 @@ export default function Log() {
             <ShoppingBag className="size-5 text-slate-600" aria-hidden="true" />
           )}
           <span className="flex-1 text-sm font-medium text-slate-900">
-            {isHomemade ? 'Made at home' : 'Bought or eaten out'}
+            {isHomemade ? 'Hecho en casa' : 'Comprado o comido fuera'}
           </span>
-          <span className="text-xs text-slate-500">tap to change</span>
+          <span className="text-xs text-slate-500">toca para cambiar</span>
         </button>
 
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Date</span>
+          <span className="text-sm font-medium text-slate-700">Fecha</span>
           <input
             type="date"
             value={entryDate}
@@ -363,7 +413,7 @@ export default function Log() {
           />
           {entryDate > todayLocal() ? (
             <span role="alert" className="mt-1 block text-xs text-red-700">
-              Dates cannot be in the future.
+              La fecha no puede estar en el futuro.
             </span>
           ) : null}
         </label>
@@ -376,7 +426,7 @@ export default function Log() {
           onClick={() => void analyzeNow()}
           className="tap mt-4 w-full rounded-lg bg-slate-900 font-semibold text-white disabled:opacity-50"
         >
-          Score this dish
+          Calcular el puntaje
         </button>
       ) : null}
 
@@ -392,7 +442,7 @@ export default function Log() {
             className="tap flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700"
           >
             <RotateCcw className="size-4" aria-hidden="true" />
-            Re-score
+            Recalcular
           </button>
         ) : null}
         <button
@@ -407,22 +457,22 @@ export default function Log() {
           onClick={() => void save()}
           className="tap w-full rounded-lg bg-slate-900 font-semibold text-white disabled:opacity-50"
         >
-          Save
+          Guardar
         </button>
         <button
           type="button"
           onClick={() => (analysis ? setConfirmDiscard(true) : discard())}
           className="tap w-full rounded-lg text-sm font-semibold text-slate-600"
         >
-          Discard
+          Descartar
         </button>
       </div>
 
       <ConfirmDialog
         open={confirmDiscard}
-        title="Discard this analysis?"
-        body="Nothing has been saved. The score and photo will be lost."
-        confirmLabel="Discard"
+        title="¿Descartar este análisis?"
+        body="No se guardó nada. Se perderán el puntaje y la foto."
+        confirmLabel="Descartar"
         destructive
         onConfirm={discard}
         onCancel={() => setConfirmDiscard(false)}
