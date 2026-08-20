@@ -1,6 +1,11 @@
-# Cholesterol Food Tracker, Technical Specification
+# Cholesterol Food Tracker, Technical Specification (v1.1)
 
 Companion to `functional-spec.md`, which defines **what** the app does. This document defines **how** it is built.
+
+> **Status: implemented.** Reconciled with the shipped code. Where a choice here
+> turned out to be impossible, unavailable, or wrong on contact with the real
+> platforms, it is corrected in place and marked *Reconciliation*. §12 lists every
+> change and the verified dependency versions.
 
 Constraints that shaped every choice: one developer, a handful of users, mobile-first, minimal infrastructure, free hosting everywhere except the LLM.
 
@@ -10,15 +15,15 @@ Constraints that shaped every choice: one developer, a handful of users, mobile-
 
 | Concern | Choice |
 |---|---|
-| Frontend | React 19 + TypeScript + Vite, single-page app, installable PWA |
+| Frontend | React 19 + TypeScript 7 + Vite 8, single-page app, installable PWA |
 | Styling / icons | Tailwind CSS v4 + `lucide-react` |
 | Routing | `react-router` v7, declarative mode |
 | Charts | Recharts |
 | Backend | Vercel serverless functions under `api/` |
-| Database | Neon Postgres via `@neondatabase/serverless`, raw SQL, no ORM |
-| Image storage | Cloudflare R2, private bucket, presigned GET URLs |
+| Database | Neon Postgres via `@neondatabase/serverless`, raw SQL, no ORM. Locally, PGlite in-process when `DATABASE_URL` is absent |
+| Image storage | Cloudflare R2, private bucket, presigned GET URLs, via `aws4fetch` |
 | Auth | Google Identity Services, server-verified once, then an httpOnly session cookie |
-| AI | One multimodal model behind a provider interface, strict JSON schema output |
+| AI | Multimodal models behind a provider interface, strict JSON schema output. **Two implemented**: Anthropic and OpenAI, plus a deterministic offline `mock` for tests |
 | Validation | Zod, shared between request bodies and AI output parsing |
 | Tests | Vitest on pure logic modules |
 | Hosting | Vercel Hobby |
@@ -43,14 +48,15 @@ A Vite SPA plus serverless functions is chosen over a full-stack framework delib
 Phone browser — React SPA, PWA, installed to home screen
   │  fetch, httpOnly session cookie
   ▼
-Vercel serverless functions  /api/*
-  ├── session      POST sign in · DELETE sign out
+Vercel serverless functions  /api/*   (11 files; Vercel Hobby allows 12)
+  ├── session      GET rehydrate · POST sign in · DELETE sign out
   ├── analyze      POST  image and/or text → description + score  (stateless, stores nothing)
-  ├── entries      GET list · POST create · PATCH · DELETE
+  ├── entries      GET list/day/one · POST create · PATCH · DELETE
   ├── image        GET   → 302 to a presigned R2 URL
   ├── settings     GET · PATCH
+  ├── summary      GET   → dashboard aggregates, computed in SQL
   ├── export       GET   → CSV
-  └── admin/*      allowlist, prompts, user deletion
+  └── admin/       ping (the probe) · allowlist · prompts · users
         │                     │                    │
         ▼                     ▼                    ▼
    Neon Postgres        Cloudflare R2           LLM API
@@ -81,25 +87,42 @@ lib/server/
   googleAuth.ts         Google ID token verification
   session.ts            sign/verify the session cookie; requireUser(); requireAdmin()
   allowlist.ts          env bootstrap OR database, see §5
+  admins.ts             isAdminEmail() — ADMIN_EMAILS only, never a table
+  users.ts              user provisioning and settings SQL
   entries.ts            all food_entries SQL — the isolation boundary, see §4
   prompts.ts            read/write/revert the prompts table
+  scoreCache.ts         the only file with score_cache SQL; the cache key
   blob.ts               put / signedUrl / remove — the only file that knows about R2
-  usage.ts              durable per-user AI budget
-  db.ts                 Neon client
+  usage.ts              durable per-user AI budget + burst limiter + analysis log
+  db.ts                 Neon client, or PGlite locally
+  env.ts                isLocalEnvironment(), debugEnabled(), debugIsAdmin()
+  errors.ts             ApiError / handleError — one exit path for every failure
+  http.ts               the request/response contract every handler is written against
+  debug.ts              seeds the local debug user as a real users row
 lib/ai/
   index.ts              getProvider(), keyed off AI_PROVIDER
   types.ts              AIProvider interface, shared shapes
+  providers/anthropic.ts
   providers/openai.ts
+  providers/mock.ts     deterministic, offline; for tests and for building without a key
+  prompts/defaults.ts   the seeded prompt bodies; 002_seed_prompts.sql is GENERATED from this
   analyze.ts            one call: image and/or description + homemade flag → full result
-  schemas.ts            Zod schemas, which also serve as the provider json_schema
+  schemas.ts            Zod schema AND a hand-written provider json_schema, kept in sync by a test
 domain/
   scoring.ts            proxy cap, trans-fat cap, whole-plant floor, clamp — PURE, no I/O
   aggregation.ts        daily average, days on target, incomplete days — PURE, no I/O
 routes/                 Today, Log, History, EntryDetail, Dashboard, Me, Admin
 components/             ScoreBadge, FactorChip, EntryRow, charts, BottomNav
+lib/requests.ts         Zod request schemas, all .strict()
+lib/dates.ts            server-side local-date maths from tz_offset_minutes
+lib/csv.ts              pure CSV serializer, with formula-injection defusing
 utils/image.ts          client-side canvas downscale + JPEG re-encode
 utils/localDate.ts      the user's local today and tz offset — the only source of "today"
-db/migrations/          001_init.sql, 002_*.sql
+utils/api.ts            apiFetch, ApiError, and the error-code → copy map
+tools/devApiPlugin.ts   the dev API plugin, and the two drift-prone lists
+scripts/audit-isolation.mjs   the §4 audit, plus four adjacent invariants
+scripts/generate-seed.mjs     regenerates 002_seed_prompts.sql from the TS constants
+db/migrations/          001_init.sql (schema), 002_seed_prompts.sql (generated)
 ```
 
 `domain/` holds every rule that is arithmetic or a decision table, as pure functions with no network or database access. All derived figures — daily averages, period averages, days on target, incomplete-day flags — come from `aggregation.ts`. **Never recompute an average ad hoc.** This is what makes the business rules in functional spec §7 testable without a network call, and it is the highest-value test surface in the app.
@@ -247,7 +270,14 @@ Cloudflare R2, private bucket. Objects are private by default and egress is free
 Only `lib/server/blob.ts` knows the store exists, behind `put(key, bytes, contentType)`, `signedUrl(key, ttl)` and `remove(prefix)`. Changing providers later is a one-file change.
 
 - **Key layout:** `{user_id}/{entry_id}.jpg`. Ownership is verified in Postgres before any URL is signed, so the prefix is organizational, not a security control.
-- **Compression is client-side.** A canvas downscale to max 1280 px at JPEG quality ~0.7 yields roughly 200–400 KB while preserving enough detail to identify a dish. The original file is never uploaded. The server independently validates MIME type against an allowlist and checks decoded size against a 3.5 MB cap, with a body-parser limit of 5 MB, because the body is buffered before any size check runs.
+- **Compression is client-side.** A canvas downscale to max 1280 px at JPEG quality ~0.7 yields roughly 200–400 KB while preserving enough detail to identify a dish. The original file is never uploaded. The server independently validates MIME type against an allowlist and checks decoded size against a 3.5 MB cap, with a body-parser limit of **4 MB**, because the body is buffered before any size check runs.
+
+> **Reconciliation (v1.1).** The 5 MB figure is unreachable: Vercel hard-caps a
+> request payload at **4.5 MB** (`413 FUNCTION_PAYLOAD_TOO_LARGE`) before a
+> handler runs. A 5 MB local limit would accept requests production rejects, so
+> both are 4 MB. The 3.5 MB decoded cap is unchanged, and is checked against the
+> **magic bytes** rather than the declared content type — a content type is only a
+> claim.
 - **Serving:** `GET /api/image?entry=<id>` authenticates, confirms the row belongs to the caller, then `302`s to a presigned URL with a 5-minute TTL. A plain `<img src>` works with no client JavaScript.
 - **Upload timing:** `/api/analyze` is stateless and stores nothing. The client keeps the compressed image and includes it in `POST /api/entries`, which writes the object and inserts the row. This sends ~300 KB twice, and in exchange there is no orphaned-object sweeper and no temporary-key lifecycle — and a discarded analysis is correct by construction, because no save path exists for it to reach accidentally.
 - **Deletion:** deleting an entry removes its object; deleting a user removes the whole `{user_id}/` prefix.
@@ -281,7 +311,15 @@ Collapsing the old image→description then description→score pair into one ca
 The functional spec requires that the same description scored twice differ by no more than one point. Three mechanisms, strongest first:
 
 1. **`score_cache`, keyed on `sha256(normalized_description | is_homemade | prompt_versions)`.** A repeat returns a byte-identical result — a zero-point difference — and costs nothing. This covers review-screen editing and everyday repeated dishes. A photo analysis writes its result into the cache under the description it produced, so a later identical description hits it. Including the prompt versions means an administrator's edit invalidates the cache naturally, while existing entries keep their stored scores, exactly as the non-retroactivity rule requires.
-2. **`temperature: 0`** plus a rubric prompt that accumulates modifiers step by step, for inputs never seen before.
+2. **`temperature: 0` where the provider still accepts it**, plus a rubric prompt that accumulates modifiers step by step, for inputs never seen before.
+
+   > **Reconciliation (v1.1).** `temperature`, `top_p` and `top_k` were **removed
+   > from current Anthropic models and are rejected with a 400**. So this
+   > mechanism exists on the OpenAI path only. On Anthropic, determinism rests on
+   > `score_cache` (mechanism 1, which gives a *zero*-point difference, better than
+   > the 1 point the functional spec allows) and on the step-by-step rubric
+   > (mechanism 3). The provider interface therefore does not expose temperature at
+   > all; each provider decides internally.
 3. **A Vitest suite of ~30 fixed descriptions** asserting each lands in an expected band, plus unit tests for the three post-rules in `domain/scoring.ts`. Run it after every prompt edit; it is the regression net for the riskiest acceptance criterion in the spec.
 
 ### Cost control
@@ -345,3 +383,89 @@ Four layers: one call instead of two on the photo path; client-side compression 
 | Timezone skew rejecting a legitimate "today" | Client-supplied local date plus `tz_offset_minutes`, DB constraint carries one day of slack |
 | Endpoint list drift — 404 locally but fine in production | Endpoint names and server env keys listed in `vite.config.ts`, updated in the same commit as the handler |
 | Session outliving a revoked user | Allowlist re-checked on every request with a 60-second cache |
+
+---
+
+## 12. Changes in v1.1 (reconciliation with the implementation)
+
+### Corrections forced by the platforms
+
+| § | v1 said | Reality | Resolution |
+|---|---|---|---|
+| 6 | 5 MB body-parser limit | Vercel hard-caps a payload at 4.5 MB before the handler runs | 4 MB in both dev and prod, so they refuse the same requests |
+| 7 | `temperature: 0` as determinism mechanism 2 | `temperature`/`top_p`/`top_k` are **removed** from current Anthropic models and return a 400 | Mechanism applies on the OpenAI path only; the provider interface does not expose temperature |
+| 2 | Two lists in `vite.config.ts` | Fine, but the CI audit needs the same source of truth | Lists live in `tools/devApiPlugin.ts`; `scripts/audit-isolation.mjs` reads them and fails the build on drift |
+| 2 | `tsc --noEmit` strict across both halves | TypeScript 7 makes `baseUrl` a hard error; Vercel supports neither `paths` nor project references and reads the **root** tsconfig when compiling `api/` | Root tsconfig **is** the browser project; the server project omits `paths`, which turns an `@/` import in server code into a compile error |
+| 3 | `create extension pgcrypto` | Not in PGlite's base bundle, so the local fallback could not run the migration | Loaded as a PGlite contrib extension, so migrations run locally byte-for-byte as in Neon |
+| — | Not mentioned | Vercel Hobby allows **12 functions**; every `api/*.ts` is one | 11 used; the audit fails the build at 13, and methods are multiplexed inside a file rather than adding one |
+
+### Endpoints added beyond §2's list
+
+Three, each because the rest of the spec required something the list omitted.
+
+- **`GET /api/session`** — the SPA must learn on load whether it has a session. §5
+  described only POST and DELETE, which would force the client to infer identity
+  from the settings endpoint and could not distinguish "not signed in" from "not
+  authorized".
+- **`GET /api/summary`** — §8 mandates aggregating in SQL, but no endpoint existed
+  to do it. The alternative, shipping 90 days of entries to compute eleven bar
+  heights, contradicts §8 and widens what leaves the server for no gain.
+- **`GET /api/admin/ping`** — the §5 admin probe. Probing `admin/allowlist` would
+  run a query for an answer we discard and couple the probe to a data shape.
+
+### Modules added beyond §2's layout
+
+`errors.ts`, `http.ts`, `env.ts`, `users.ts`, `admins.ts`, `scoreCache.ts`,
+`requests.ts`, `dates.ts`, `csv.ts`. Each exists because handlers may contain no
+SQL and no business rule, and the spec's layout left those homeless. `admins.ts`
+is separate from `session.ts` only to break an import cycle.
+
+### Schema changes
+
+- `ai_usage` key columns are `not null`; two housekeeping indexes added.
+- `schema_migrations` added: migrations are applied by hand, so a record of what a
+  given database has seen is the only way to know.
+- **`score_cache.result` stores the validated model output, not the final score,
+  and deliberately omits nothing else that identifies a person.** Storing the
+  output means a fix in `domain/scoring.ts` reaches cached rows without a purge.
+  The table is keyed by hash and is **not user-scoped**, which was the one privacy
+  seam in an otherwise strictly isolated schema.
+- Seeds live in `002_seed_prompts.sql`, **generated** from
+  `lib/ai/prompts/defaults.ts` by `scripts/generate-seed.mjs`, dollar-quoted
+  because the rubric is full of apostrophes. The owner's allowlist row is not
+  seeded: `ALLOWED_EMAILS` is the bootstrap, and a personal address does not
+  belong in a committed migration.
+
+### Decisions the spec left open
+
+| Question | Decision |
+|---|---|
+| Allowlist precedence when an `ALLOWED_EMAILS` address is `blocked` in the DB | **The DB wins.** The env var grants only when no row exists, or when the query failed. The reverse would make the env var an un-revocable back door the admin UI could not close. |
+| "A `user_id` in a request body is ignored" | Request schemas are `.strict()`, so such a body is **rejected with a 400**. Silently dropping it makes a client bug that tries to set a score look like it worked. |
+| Where the AI budget is consumed | Read-only precheck in the handler; `consume()` inside `analyze()`, after a cache miss and immediately before the billable call. A cache hit must not cost quota. |
+| `tz_offset_minutes` sign | **Minutes east of UTC** (UTC-3 is `-180`), matching ISO-8601 and the opposite of `Date.getTimezoneOffset()`. Asserted on both sides. |
+| Image transport | Base64 in JSON. The runtime parses JSON for free and no multipart, one Zod schema validates the whole body, and ~400 KB becomes ~547 KB — well inside the 4 MB limit. |
+| `Secure` on the session cookie | Only when deployed. Safari refuses `Secure` cookies on `http://localhost`, so setting it unconditionally makes local dev silently lose sessions in a way that looks like an auth bug. |
+| Reasoning depth | `AI_EFFORT`, default `low`. See functional spec §9 for the latency measurements behind it. |
+
+### Verified dependency versions
+
+React 19.2.8 · Vite 8.2.1 · TypeScript 7.0.2 · Tailwind 4.3.3 · react-router 7.18.2 ·
+Recharts 3.10.1 · Zod 4.4.3 · `@neondatabase/serverless` 1.1.0 · jose 6.2.9 ·
+google-auth-library 11.0.2 · `@anthropic-ai/sdk` 0.119.0 · openai 7.5.0 ·
+aws4fetch 1.0.20 · Vitest 4.1.11 · PGlite 0.5.5 (dev only) · Node 24.
+
+`@vercel/node` is **not** a dependency: the handler contract is ~20 lines in
+`lib/server/http.ts`, which avoids a dev dependency with high-severity advisories
+in production code's type surface.
+
+### What is verified, and what is not
+
+Verified locally with no cloud accounts, plus a real Anthropic key: 209 unit and
+integration tests, four strict typecheck projects, the isolation audit, a
+production build, every endpoint driven end to end, and the five screens driven in
+a browser at 390×844.
+
+**Not yet exercised:** real Google sign-in, Neon, R2, and a Vercel deployment —
+all four need credentials this build does not have. The code paths exist and are
+typechecked; they have not been run against the live services.
