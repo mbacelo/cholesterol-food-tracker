@@ -30,3 +30,13 @@ export function csvRow(values: (string | number | boolean)[]): string {
 export function toCsv(header: string[], rows: (string | number | boolean)[][]): string {
   return [csvRow(header), ...rows.map(csvRow)].join('\r\n') + '\r\n'
 }
+
+/**
+ * A UTF-8 BOM, prepended to the exported file.
+ *
+ * Excel on Windows ignores the HTTP `charset` and decodes a .csv with the system
+ * ANSI codepage, so "empanada de espinaca y jamón" arrives as "jamÃ³n". The BOM
+ * is the only in-band signal it honours. Harmless elsewhere: Sheets, Numbers and
+ * LibreOffice all strip it.
+ */
+export const UTF8_BOM = '\ufeff'

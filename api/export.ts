@@ -1,4 +1,4 @@
-import { toCsv } from '../lib/csv.js'
+import { toCsv, UTF8_BOM } from '../lib/csv.js'
 import { localDayFromOffset } from '../lib/dates.js'
 import { csvRows } from '../lib/server/entries.js'
 import { assertMethod, handleError } from '../lib/server/errors.js'
@@ -30,7 +30,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
     res.setHeader('Content-Type', 'text/csv; charset=utf-8')
     res.setHeader('Content-Disposition', `attachment; filename="food-entries-${today}.csv"`)
     res.setHeader('Cache-Control', 'no-store')
-    res.status(200).send(csv)
+    res.status(200).send(UTF8_BOM + csv)
   } catch (err) {
     return handleError(res, err, 'GET /api/export')
   }
