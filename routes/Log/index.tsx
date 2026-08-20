@@ -22,9 +22,11 @@ import {
  * The capture flow (functional spec §6.1), and the quick check (§6.2) -- they are
  * the same screen, because nothing is stored until Save.
  *
- * Analysis is NEVER triggered from a bare effect. Every model call originates in
- * an event handler, which is what makes React 19 StrictMode's double-invoked
- * effects unable to double-charge the endpoint.
+ * Analysis is NEVER automatic. Every model call originates in a tap -- the photo
+ * pick, "Score this dish", or "Re-score" -- so no keystroke, blur or timer can
+ * spend money, and React 19 StrictMode's double-invoked effects cannot
+ * double-charge the endpoint. Editing the description leaves the old score on
+ * screen, marked stale, with Save blocked until the user asks for a re-score.
  */
 
 type Phase =
@@ -35,8 +37,6 @@ type Phase =
   | { kind: 'saving' }
   | { kind: 'error'; message: string }
 
-const DEBOUNCE_MS = 900
-
 export default function Log() {
   const navigate = useNavigate()
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' })
@@ -46,8 +46,6 @@ export default function Log() {
   const [entryDate, setEntryDate] = useState(todayLocal())
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null)
   const [scoredHash, setScoredHash] = useState<string | null>(null)
-  const [rescoring, setRescoring] = useState(false)
-  const [rescoreError, setRescoreError] = useState<string | null>(null)
   const [imageVolatile, setImageVolatile] = useState(false)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
 
@@ -172,21 +170,6 @@ export default function Log() {
 
   const dirty = analysis !== null && scoredHash !== inputHash(description, isHomemade)
   const canAnalyze = description.trim().length > 0 || image !== null
-
-  // Re-score on a settled edit. Debounced, because each trigger is a POTENTIAL
-  // paid call -- the cache makes repeats free, but a first-time phrase is not.
-  useEffect(() => {
-    if (phase.kind !== 'review') return
-    if (!dirty || description.trim().length === 0) return
-    const timer = setTimeout(() => {
-      setRescoring(true)
-      setRescoreError(null)
-      runAnalysis(description, isHomemade, image)
-        .catch((err) => setRescoreError(errorMessage(err)))
-        .finally(() => setRescoring(false))
-    }, DEBOUNCE_MS)
-    return () => clearTimeout(timer)
-  }, [description, dirty, image, isHomemade, phase.kind, runAnalysis])
 
   const analyzeNow = useCallback(async () => {
     setPhase({ kind: 'analyzing' })
@@ -314,16 +297,16 @@ export default function Log() {
       {analysis && analysis.food_detected ? (
         <section aria-label="Score" className="mt-4 rounded-card bg-white p-4">
           <div className="flex items-center gap-3">
-            <ScoreBadge score={analysis.score} size="xl" showIcon pending={rescoring} />
+            <ScoreBadge score={analysis.score} size="xl" showIcon />
             <p className="flex-1 text-sm text-slate-700">{analysis.rationale}</p>
           </div>
           <FactorLists
             positive={analysis.positive_factors}
             negative={analysis.negative_factors}
           />
-          {rescoreError ? (
-            <p role="alert" className="mt-2 text-sm text-red-700">
-              {rescoreError}
+          {dirty ? (
+            <p role="status" className="mt-3 text-sm text-amber-700">
+              This score is for the previous wording. Tap Re-score to update it.
             </p>
           ) : null}
         </section>
@@ -335,16 +318,6 @@ export default function Log() {
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value.slice(0, 200))}
-            onBlur={() => {
-              // Blur re-scores immediately, so someone who types and taps Save
-              // is not waiting on a timer.
-              if (dirty && description.trim().length > 0) {
-                setRescoring(true)
-                runAnalysis(description, isHomemade, image)
-                  .catch((err) => setRescoreError(errorMessage(err)))
-                  .finally(() => setRescoring(false))
-              }
-            }}
             rows={3}
             maxLength={200}
             enterKeyHint="done"
@@ -419,7 +392,7 @@ export default function Log() {
             className="tap flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700"
           >
             <RotateCcw className="size-4" aria-hidden="true" />
-            Re-score now
+            Re-score
           </button>
         ) : null}
         <button
@@ -428,14 +401,13 @@ export default function Log() {
             analysis === null ||
             !analysis.food_detected ||
             dirty ||
-            rescoring ||
             description.trim().length === 0 ||
             entryDate > todayLocal()
           }
           onClick={() => void save()}
           className="tap w-full rounded-lg bg-slate-900 font-semibold text-white disabled:opacity-50"
         >
-          {rescoring ? 'Re-scoring…' : 'Save'}
+          Save
         </button>
         <button
           type="button"

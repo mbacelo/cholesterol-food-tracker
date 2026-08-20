@@ -200,19 +200,19 @@ of its examples, or anything of the same kind, is part of the dish.
   N4  -2  Processed meat: sausage, chorizo, morcilla, longaniza, bacon, panceta,
           salami, ham, mortadella, hot dog, pâté, salchichón, cured pork.
   N5  -2  Deep fried, or fried in abundant fat: milanesa, papas fritas,
-          empanada frita, churros, chicharrón, tempura, tostones, tortilla de
-          papas, anything battered or breaded and fried.
+          empanada frita, churros, tempura, tostones, tortilla de papas,
+          anything battered or breaded and fried.
+          Do not apply N5 for a dish you already scored with N2 because it is
+          built on its own frying fat, such as chicharrón.
   N6  -1  Refined grains are the dominant carbohydrate: white bread, white rice,
           standard pasta, pastry, white flour tortilla, white bun, refined corn
-          masa, arepa de harina precocida, crackers.
+          masa, arepa de harina, crackers.
   N7  -1  Added sugar: a sweet dish, a dessert, a sweetened drink, jam, dulce de
           leche, syrup, sweetened yoghurt, a sugary soft drink, juice with sugar.
-  N8  -1  Organ meat (liver, kidney, tripe, chinchulines), or more than one egg
-          yolk.
-  N9  -1  PROXY: ultra-processed convenience product — supermarket ready meal,
+  N8  -1  PROXY: ultra-processed convenience product — supermarket ready meal,
           packaged snack, instant noodles, fast food, frozen breaded product,
           powdered sauce or soup.
-  N10 -1  PROXY: bought or restaurant food whose cooking fat cannot be
+  N9  -1  PROXY: bought or restaurant food whose cooking fat cannot be
           identified from the description.
 
 ## STEP 3 — Apply every positive modifier that applies
@@ -222,8 +222,9 @@ of its examples, or anything of the same kind, is part of the dish.
   P2  +2  The PRIMARY fat of the dish is unsaturated: olive oil, avocado, nuts,
           seeds, sunflower or canola oil, tahini.
           Do not apply P2 if N2 applies — a dish has only one primary fat.
-  P3  +2  Fatty fish rich in omega-3: salmon, sardines, mackerel, anchovies,
-          trout, herring, jurel, caballa.
+  P3  +1  Fatty fish rich in omega-3: salmon, sardines, mackerel, anchovies,
+          trout, herring, jurel, caballa. Only +1: omega-3 lowers triglycerides
+          far more than it lowers LDL, and this scale is LDL only.
   P4  +1  Moderate soluble fiber source: apple, pear, citrus, orange, carrot,
           Brussels sprouts, flaxseed, chia, aubergine, okra, plum, fig, guava.
   P5  +1  Soy protein is a main component: tofu, tempeh, edamame, soy milk,
@@ -242,7 +243,7 @@ of its examples, or anything of the same kind, is part of the dish.
 ## STEP 4 — Accumulate step by step
 
 Before you write any output field, do the arithmetic explicitly and in one pass,
-in this exact order: N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, then P1 through P10.
+in this exact order: N1, N2, N3, N4, N5, N6, N7, N8, N9, then P1 through P10.
 Add each applicable modifier to running_total one at a time. Do not jump to a
 final impression, do not average, do not round. If you are uncertain between two
 adjacent decisions, choose the one the description literally supports. This step
@@ -270,8 +271,8 @@ Worked example — "Supermarket chicken curry ready meal", bought:
   start                                             0
   N3  -2  cream or coconut in the curry sauce      -2
   N6  -1  white rice                               -3
-  N9  -1  ultra-processed ready meal               -4
-  N10 -1  bought, cooking fat unknown              -5
+  N8  -1  ultra-processed ready meal               -4
+  N9  -1  bought, cooking fat unknown              -5
   P10 +1  chicken is a lean protein                -4
   modifier_sum = -4
   proxy_ultra_processed = true, proxy_unidentified_fat = true
@@ -292,15 +293,15 @@ Worked example — "Café con leche entera y tres medialunas", bought:
 
 \`is_homemade\` is context, not a modifier of its own.
 
-- is_homemade = true: assume ordinary home cooking. Do NOT apply N9 or N10 on
+- is_homemade = true: assume ordinary home cooking. Do NOT apply N8 or N9 on
   the grounds that a fat is unnamed. If the description names no fat, assume a
   reasonable home fat for that dish and say so in the rationale.
 - is_homemade = false: the dish was bought or eaten out. If the description does
-  not identify the cooking fat, apply N10, assume the less favourable
+  not identify the cooking fat, apply N9, assume the less favourable
   preparation typical of that dish sold commercially — more oil, more butter,
   reused frying fat, more cheese — and say in one clause of the rationale that
   this was assumed because the dish was not homemade.
-- Apply N9 only for an actual convenience product, not merely because food was
+- Apply N8 only for an actual convenience product, not merely because food was
   bought. Restaurant-grilled fish is not ultra-processed.
 
 ## STEP 6 — What the application does, so that you do NOT
@@ -338,20 +339,22 @@ Therefore:
       It MUST be false whenever \`has_trans_fat\` is true.
 
   \`proxy_ultra_processed\`
-      true only when N9 applies.
+      true only when N8 applies.
 
   \`proxy_unidentified_fat\`
-      true only when N10 applies.
+      true only when N9 applies.
 
 ## STEP 7 — Not penalized
 
 Do NOT reduce the score for:
   - dietary cholesterol as a general category. Saturated and trans fat are the
     dominant dietary drivers of LDL; dietary cholesterol is not.
+  - organ meat (liver, kidney, tripe, chinchulines). It is high in dietary
+    cholesterol but lean; score its cooking fat, not the organ.
   - shellfish. Prawns, mussels, squid, clams and octopus count as LEAN PROTEIN
     under P10, and never as a negative.
-  - eggs beyond the single N8 line for more than one yolk. There is no other
-    egg penalty.
+  - egg yolks. Yolk cholesterol is dietary cholesterol, which is not a driver
+    here. There is no egg penalty.
   - salt or sodium, alcohol, caffeine, gluten, lactose, total calories, portion
     size, "processed" as a vague quality, or any concern that is not saturated
     fat, trans fat, refined carbohydrate, added sugar or fiber.

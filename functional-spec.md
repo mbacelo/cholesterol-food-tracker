@@ -124,7 +124,6 @@ Every dish starts at **0** and the modifiers below apply. Quantity is ignored: a
 | Deep fried, or fried in abundant fat | -2 |
 | Refined grains are the dominant carbohydrate (white bread, white rice, standard pasta, pastry) | -1 |
 | Added sugar (sweet dish or sweetened drink) | -1 |
-| Organ meat, or more than one egg yolk | -1 |
 | *Proxy:* ultra-processed convenience product (ready meal, packaged snack, fast food) | -1 |
 | *Proxy:* bought or restaurant food whose cooking fat cannot be identified from the description | -1 |
 
@@ -134,7 +133,7 @@ Every dish starts at **0** and the modifiers below apply. Quantity is ignored: a
 |---|---|
 | Strong soluble fiber source (oats, barley, legumes, lentils, chickpeas, beans, psyllium) | +2 |
 | The primary fat is unsaturated (olive oil, avocado, nuts, seeds) | +2 |
-| Fatty fish rich in omega-3 (salmon, sardines, mackerel, anchovies, trout) | +2 |
+| Fatty fish rich in omega-3 (salmon, sardines, mackerel, anchovies, trout) | +1 |
 | Moderate soluble fiber source (apple, pear, citrus, carrot, Brussels sprouts, flaxseed, aubergine) | +1 |
 | Soy protein is a main component (tofu, tempeh, edamame, soy milk) | +1 |
 | Nuts or seeds are a real component, not a garnish | +1 |
@@ -166,7 +165,7 @@ Every dish starts at **0** and the modifiers below apply. Quantity is ignored: a
 
 **Note on the homemade flag.** `is_homemade` is context for the AI. When a dish is marked as bought and the description does not identify the cooking fat, the AI assumes a less favorable preparation and says so in the rationale. This lives in `scoring_prompt` and can be softened or removed by the administrator.
 
-Deliberately *not* penalized: dietary cholesterol as a general category, and shellfish specifically. Saturated and trans fat are the dominant dietary drivers of LDL, and lean shellfish counts here as a lean protein.
+Deliberately *not* penalized: dietary cholesterol as a general category, organ meat, egg yolks, and shellfish specifically. Saturated and trans fat are the dominant dietary drivers of LDL, and lean shellfish counts here as a lean protein.
 
 ### 4.3 Rationale
 
@@ -224,7 +223,7 @@ Mobile-first. Five destinations in a persistent bottom navigation bar.
 
 **Required behaviors**
 
-- Editing the description or the homemade checkbox on the review screen **re-runs the scoring** before saving.
+- Editing the description or the homemade checkbox on the review screen requires a **re-score before saving**: the stale score stays visible and marked as stale, Save is blocked, and the re-score runs **on demand** when the user taps it. Scoring is never triggered by typing, by a blur or by a timer -- a keystroke must never be able to spend money. *(Reconciliation, v1.2: an earlier build re-scored on a debounced pause in typing, which charged for every intermediate phrase.)*
 - The score and rationale are never directly editable. If the user disagrees, the remedy is to correct the description.
 - If the AI cannot identify food in the image, the app says so and asks the user to type a description, keeping the photo attached.
 - If the user *types* something that is not a dish ("asdf"), the entry is still scorable: it scores **0** with a rationale saying the text does not describe a recognisable dish. Asking someone who just typed to "type a description" would be a loop. *(Reconciliation, v1.1: v1 defined this fallback only for images.)*
@@ -383,7 +382,7 @@ Visible only to administrators. Contains no food data of any kind.
 
 - [ ] A dish can be logged from a phone camera photo in a few seconds on the happy path, and from a gallery image or typed text.
 - [ ] The photo path performs one analysis, not two.
-- [ ] Editing the description or homemade checkbox on the review screen re-scores before saving.
+- [ ] Editing the description or homemade checkbox on the review screen blocks Save until the user taps re-score; typing alone never calls the model.
 - [ ] A photo the AI cannot identify falls back to typed description without losing the photo.
 - [ ] The date defaults to the user's local today, accepts any past date, and rejects future dates.
 - [ ] Every saved entry has an integer score in -5..+5 and a non-empty rationale naming specific ingredients, plus distinct positive and negative factor items.
@@ -439,6 +438,7 @@ ambiguous, or impossible as written. Nothing here is a change of intent.
 
 | § | Change | Why |
 |---|---|---|
+| 4.2 | Organ meat and the second egg yolk are no longer penalized; fatty fish drops from +2 to +1 | Both were dietary-cholesterol and triglyceride effects, not LDL ones — the organ-meat penalty contradicted §4.2's own exemption for dietary cholesterol, and omega-3 moves triglycerides far more than LDL |
 | 4.2 | The whole-plant floor is skipped when the trans-fat cap applied | The literal rule order let the floor undo the cap, contradicting an acceptance criterion |
 | 4.2 / 6.3 | The AI returns an unclamped `modifier_sum` and two `proxy_*` booleans; its own `score` is advisory | The proxy cap cannot be applied without knowing which proxies fired, and cannot act on a clamped value |
 | 6.1 | Typed nonsense scores 0 with an honest rationale | The image fallback ("type a description") is a loop when the user already typed |

@@ -31,13 +31,12 @@ const NEGATIVE: Rule[] = [
   { pattern: /fried|milanesa|frita|papas fritas|tempura/i, modifier: -2, label: 'Deep fried', reason: 'deep fried' },
   { pattern: /white rice|white bread|pasta|tallarines|white bun|masa/i, modifier: -1, label: 'Refined grain', reason: 'refined carbohydrate' },
   { pattern: /sugar|dessert|cake|soda|syrup|sweetened/i, modifier: -1, label: 'Added sugar', reason: 'added sugar' },
-  { pattern: /liver|kidney|tripe/i, modifier: -1, label: 'Organ meat', reason: 'organ meat' },
 ]
 
 const POSITIVE: Rule[] = [
   { pattern: /lentil|chickpea|garbanzo|bean|oats|barley|frijol|poroto/i, modifier: 2, label: 'Legumes', reason: 'soluble fiber' },
   { pattern: /olive oil|avocado|nuts|seeds|tahini|aceite de oliva/i, modifier: 2, label: 'Olive oil', reason: 'unsaturated fat' },
-  { pattern: /salmon|sardine|mackerel|anchov|trout|jurel/i, modifier: 2, label: 'Fatty fish', reason: 'omega-3 fatty fish' },
+  { pattern: /salmon|sardine|mackerel|anchov|trout|jurel/i, modifier: 1, label: 'Fatty fish', reason: 'omega-3 fatty fish' },
   { pattern: /apple|pear|citrus|orange|carrot|flaxseed|aubergine/i, modifier: 1, label: 'Fruit fiber', reason: 'soluble fiber' },
   { pattern: /tofu|tempeh|edamame|soy/i, modifier: 1, label: 'Soy protein', reason: 'soy protein' },
   { pattern: /quinoa|brown rice|whole wheat|whole grain|integral/i, modifier: 1, label: 'Whole grain', reason: 'whole grains' },

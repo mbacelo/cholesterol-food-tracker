@@ -27,7 +27,6 @@ const NEGATIVE = [
   ['Deep fried, or fried in abundant fat', '-2'],
   ['Refined grains are the dominant carbohydrate', '-1'],
   ['Added sugar', '-1'],
-  ['Organ meat, or more than one egg yolk', '-1'],
   ['Ultra-processed convenience product', '-1'],
   ['Bought food whose cooking fat cannot be identified', '-1'],
 ]
@@ -35,7 +34,7 @@ const NEGATIVE = [
 const POSITIVE = [
   ['Strong soluble fiber source (oats, legumes, psyllium)', '+2'],
   ['The primary fat is unsaturated (olive oil, avocado, nuts)', '+2'],
-  ['Fatty fish rich in omega-3', '+2'],
+  ['Fatty fish rich in omega-3', '+1'],
   ['Moderate soluble fiber source (apple, carrot, flaxseed)', '+1'],
   ['Soy protein is a main component', '+1'],
   ['Nuts or seeds are a real component, not a garnish', '+1'],
