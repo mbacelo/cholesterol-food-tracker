@@ -29,7 +29,7 @@ export type Row = Record<string, unknown>
  * Values interpolated into the template become bound parameters -- never string
  * concatenation -- so this shape is also what keeps SQL injection off the table.
  */
-export type Sql = <T extends Row = Row>(
+export type Sql = <T = Row>(
   strings: TemplateStringsArray,
   ...values: unknown[]
 ) => Promise<T[]>
@@ -42,7 +42,7 @@ export function db(): Sql {
   const url = process.env.DATABASE_URL
   if (url) {
     const query = neon(url)
-    cached = (async <T extends Row = Row>(strings: TemplateStringsArray, ...values: unknown[]) => {
+    cached = (async <T = Row>(strings: TemplateStringsArray, ...values: unknown[]) => {
       // The Neon HTTP driver returns a plain rows array by default.
       return (await query(strings, ...values)) as unknown as T[]
     }) as Sql
@@ -91,7 +91,7 @@ type LocalDatabase = {
 let localDb: Promise<LocalDatabase> | undefined
 
 function localSql(): Sql {
-  return (async <T extends Row = Row>(strings: TemplateStringsArray, ...values: unknown[]) => {
+  return (async <T = Row>(strings: TemplateStringsArray, ...values: unknown[]) => {
     const instance = await (localDb ??= openLocalDatabase())
     const { text, params } = toParameterized(strings, values)
     const result = await instance.query<T>(text, params)

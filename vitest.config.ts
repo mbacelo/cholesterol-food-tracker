@@ -15,6 +15,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['domain/**/*.test.ts', 'lib/**/*.test.ts', 'utils/**/*.test.ts'],
+    // Several suites share the one on-disk local Postgres under .dev-data/, so
+    // they must not run concurrently in separate workers.
+    fileParallelism: false,
     // The fixture suite in lib/ai/ calls the real model and costs money, so it
     // reads RUN_AI_FIXTURES itself and skips unless explicitly enabled.
     passWithNoTests: false,

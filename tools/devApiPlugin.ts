@@ -133,6 +133,38 @@ function decodeBody(raw: Buffer, contentType: string | undefined): unknown {
   return raw
 }
 
+/**
+ * Installs `body` as a LAZY, CACHED getter that throws on malformed input.
+ *
+ * This mirrors the Vercel runtime exactly, and the fidelity matters: there,
+ * parsing happens when the handler touches req.body, so a malformed JSON body
+ * throws a SyntaxError INSIDE the handler's try block and handleError turns it
+ * into a 400. Parsing eagerly out here instead would surface the same request as
+ * a 500 locally and a 400 in production -- a behaviour difference in exactly the
+ * layer whose job is to not have one.
+ */
+function defineLazyBody(req: IncomingMessage, raw: Buffer): void {
+  let parsed: unknown
+  let thrown: unknown
+  let done = false
+  Object.defineProperty(req, 'body', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      if (!done) {
+        done = true
+        try {
+          parsed = decodeBody(raw, req.headers['content-type'])
+        } catch (err) {
+          thrown = err
+        }
+      }
+      if (thrown) throw thrown
+      return parsed
+    },
+  })
+}
+
 function decorate(res: ServerResponse): ApiResponse {
   const out = res as ApiResponse
   out.status = (code: number) => {
@@ -165,9 +197,14 @@ export function devApiPlugin(): Plugin {
     apply: 'serve',
 
     config(_config, { mode }) {
-      // Load .env.local with an empty prefix so server-only keys are visible here,
-      // then copy ONLY the declared keys into process.env. Anything absent from
-      // the list never reaches a handler, which is what makes the list load-bearing.
+      // An empty prefix makes loadEnv return the whole ambient process.env as
+      // well as the .env files, so snapshot the ambient keys first: the
+      // difference is what the file actually declares, and only those are worth
+      // warning about.
+      const ambient = new Set(Object.keys(process.env))
+
+      // Copy ONLY the declared keys into process.env. Anything absent from the
+      // list never reaches a handler, which is what makes the list load-bearing.
       const env = loadEnv(mode, process.cwd(), '')
       for (const key of SERVER_ENV_KEYS) {
         const value = env[key]
@@ -176,6 +213,7 @@ export function devApiPlugin(): Plugin {
 
       const undeclared = Object.keys(env).filter(
         (key) =>
+          !ambient.has(key) &&
           !key.startsWith('VITE_') &&
           !(SERVER_ENV_KEYS as readonly string[]).includes(key) &&
           !VITE_INTRINSIC_KEYS.includes(key),
@@ -222,7 +260,7 @@ export function devApiPlugin(): Plugin {
         try {
           const raw = await readBody(req)
           const apiReq = req as ApiRequest
-          apiReq.body = decodeBody(raw, req.headers['content-type'])
+          defineLazyBody(req, raw)
           apiReq.cookies = parseCookies(req.headers.cookie)
           apiReq.query = Object.fromEntries(
             [...new Set(url.searchParams.keys())].map((key) => {
