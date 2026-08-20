@@ -14,7 +14,7 @@ import type { AIProvider, AnalyzeRequest, ProviderResult } from '../types.js'
  * and a rubric prompt that accumulates modifiers step by step.
  */
 
-const DEFAULT_MODEL = 'claude-opus-5'
+const DEFAULT_MODEL = 'claude-sonnet-5'
 
 /**
  * Thinking is on by default on current Claude models and `max_tokens` caps

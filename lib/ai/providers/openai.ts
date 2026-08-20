@@ -11,12 +11,32 @@ import { renderUserTurn } from './anthropic.js'
  * data and must not be retained by the provider for any purpose the user has not
  * agreed to (functional spec §6.10).
  *
- * Unlike the Claude path, `temperature: 0` IS accepted here, so tech spec §7's
- * second determinism mechanism applies on this provider. Use a non-reasoning
- * multimodal model: reasoning models reject temperature.
+ * On determinism: `temperature: 0` (tech spec §7's second mechanism) is NOT sent
+ * here. Current gpt-5.x models accept it only while reasoning effort is `none`,
+ * and reasoning buys more scoring quality than temperature buys stability -- so
+ * this provider reasons and drops the temperature, exactly as the Claude path
+ * does. Determinism rests on `score_cache` and the step-by-step rubric.
  */
 
-const DEFAULT_MODEL = 'gpt-4.1'
+const DEFAULT_MODEL = 'gpt-5.6-luna'
+
+/**
+ * Reasoning depth, and the main latency and cost lever. `low` by default, to
+ * match the Claude path: enough reasoning to work the rubric, without paying for
+ * depth this mechanical accumulation does not need. Effort is always sent
+ * explicitly, since these models otherwise default to `medium`. `none` is a legal
+ * value here and not on the Claude path.
+ */
+const DEFAULT_EFFORT = 'low'
+const EFFORT_LEVELS = ['none', 'low', 'medium', 'high', 'xhigh', 'max'] as const
+type Effort = (typeof EFFORT_LEVELS)[number]
+
+function effort(): Effort {
+  const raw = process.env.AI_EFFORT
+  return (EFFORT_LEVELS as readonly string[]).includes(raw ?? '')
+    ? (raw as Effort)
+    : DEFAULT_EFFORT
+}
 
 let client: OpenAI | undefined
 
@@ -46,7 +66,7 @@ export function openAIProvider(): AIProvider {
       const started = Date.now()
       const response = await client.responses.create({
         model,
-        temperature: 0,
+        reasoning: { effort: effort() },
         store: false,
         instructions: request.systemPrompt,
         input: [{ role: 'user', content }],

@@ -322,11 +322,15 @@ Collapsing the old image→description then description→score pair into one ca
 The functional spec requires that the same description scored twice differ by no more than one point. Three mechanisms, strongest first:
 
 1. **`score_cache`, keyed on `sha256(normalized_description | is_homemade | prompt_versions)`.** A repeat returns a byte-identical result — a zero-point difference — and costs nothing. This covers review-screen editing and everyday repeated dishes. A photo analysis writes its result into the cache under the description it produced, so a later identical description hits it. Including the prompt versions means an administrator's edit invalidates the cache naturally, while existing entries keep their stored scores, exactly as the non-retroactivity rule requires.
-2. **`temperature: 0` where the provider still accepts it**, plus a rubric prompt that accumulates modifiers step by step, for inputs never seen before.
+2. **A rubric prompt that accumulates modifiers step by step**, for inputs never seen before. `temperature: 0` is no longer sent on any provider.
 
    > **Reconciliation (v1.1).** `temperature`, `top_p` and `top_k` were **removed
    > from current Anthropic models and are rejected with a 400**. So this
-   > mechanism exists on the OpenAI path only. On Anthropic, determinism rests on
+   > mechanism is gone everywhere. On OpenAI it was legal only at reasoning effort
+   > `none`, and reasoning is worth more to scoring quality than a fixed
+   > temperature is to stability -- so that path reasons at `AI_EFFORT` (default
+   > `low`) and sends no temperature either. On both providers,
+   > determinism rests on
    > `score_cache` (mechanism 1, which gives a *zero*-point difference, better than
    > the 1 point the functional spec allows) and on the step-by-step rubric
    > (mechanism 3). The provider interface therefore does not expose temperature at
@@ -403,7 +407,7 @@ Four layers: one call instead of two on the photo path; client-side compression 
 |---|---|
 | Cross-user data leak from a query missing its `user_id` | Single accessor file, `userId` always first and always in the `where`, grep audit (§4) |
 | A bad prompt edit silently degrades all future scoring | `previous_body` one-click revert, version bump, fixture suite run after saving, cache invalidated by version |
-| Score drift on unseen descriptions | `score_cache` for repeats, `temperature: 0`, the three post-rules re-applied in our own code from model-returned booleans |
+| Score drift on unseen descriptions | `score_cache` for repeats, the step-by-step rubric, the three post-rules re-applied in our own code from model-returned booleans |
 | The model returns a score inconsistent with its own factors | `domain/scoring.ts` owns the final integer; the model's number is an input, not the answer |
 | LLM cost creep from re-scoring on every edit | One call per analysis, client-side compression, `score_cache`, durable daily cap in `ai_usage` |
 | Vision model misreads hidden cooking fats | `is_homemade` supplied as context; the description is always editable and always re-scored |
@@ -420,7 +424,8 @@ Four layers: one call instead of two on the photo path; client-side compression 
 | § | v1 said | Reality | Resolution |
 |---|---|---|---|
 | 6 | 5 MB body-parser limit | Vercel hard-caps a payload at 4.5 MB before the handler runs | 4 MB in both dev and prod, so they refuse the same requests |
-| 7 | `temperature: 0` as determinism mechanism 2 | `temperature`/`top_p`/`top_k` are **removed** from current Anthropic models and return a 400 | Mechanism applies on the OpenAI path only; the provider interface does not expose temperature |
+| 7 | `temperature: 0` as determinism mechanism 2 | `temperature`/`top_p`/`top_k` are **removed** from current Anthropic models and return a 400 | Mechanism dropped; the provider interface does not expose temperature |
+| 7 | `temperature: 0` on the OpenAI path | gpt-5.x reasoning models reject temperature unless `reasoning.effort` is `none`, and default to `medium` | Reasoning is worth more here than a fixed temperature: `AI_EFFORT` now drives the OpenAI path too (default `low`) and temperature is not sent at all |
 | 2 | Two lists in `vite.config.ts` | Fine, but the CI audit needs the same source of truth | Lists live in `tools/devApiPlugin.ts`; `scripts/audit-isolation.mjs` reads them and fails the build on drift |
 | 2 | `tsc --noEmit` strict across both halves | TypeScript 7 makes `baseUrl` a hard error; Vercel supports neither `paths` nor project references and reads the **root** tsconfig when compiling `api/` | Root tsconfig **is** the browser project; the server project omits `paths`, which turns an `@/` import in server code into a compile error |
 | 3 | `create extension pgcrypto` | Not in PGlite's base bundle, so the local fallback could not run the migration | Loaded as a PGlite contrib extension, so migrations run locally byte-for-byte as in Neon |

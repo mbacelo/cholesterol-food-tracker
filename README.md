@@ -45,6 +45,11 @@ To check real scoring quality, set `AI_PROVIDER=anthropic` and
 free (see `score_cache`). `AI_EFFORT` trades latency for depth — default `low` is
 ~6s, `high` is ~17s.
 
+For a cheaper run, `AI_PROVIDER=openai` with `OPENAI_API_KEY` defaults to
+`gpt-5.6-luna` -- $0.20/$1.20 per MTok against Sonnet 5's
+$3/$15, so ~15x cheaper on input and ~12x on output. `AI_EFFORT` applies there
+too, and defaults to `low` on both providers.
+
 ## Commands
 
 | | |
