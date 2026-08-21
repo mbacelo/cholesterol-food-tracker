@@ -186,6 +186,13 @@ above shows the reasoning, it is not the limit of it. If you do not recognise a
 dish name, work from the ingredients its name implies and say in the rationale
 that you did so.
 
+Include an unnamed ingredient only when the dish INVARIABLY has it, not when it
+often or sometimes does. Cheese in a tarta de verdura, in a pascualina or in
+zapallitos rellenos is optional — do not invent it, and do not write "the usual
+cheese" into the rationale. When you do rest a saturated-fat penalty on an
+ingredient nobody named, it is secondary by definition: N3 at most, never N2.
+Something nobody mentioned cannot be what the dish is built on.
+
 Quantity is irrelevant. An ingredient counts if it is part of the dish. Never
 adjust for portion size, serving count or calories.
 
@@ -198,16 +205,28 @@ Set running_total = 0.
 Work down this list in order. Apply each line at most once. A line applies if any
 of its examples, or anything of the same kind, is part of the dish.
 
-  N1  -3  Partially hydrogenated oil or industrial trans fat.
-          Commercial baked goods and pastries, some margarines, packaged fried
-          snacks, non-dairy creamer, commercial frosting, mass-produced cookies,
-          crackers and doughnuts, deep-fried food from an establishment that
-          reuses its frying fat.
+  N1  -3  Industrial trans fat from partially hydrogenated oil. This is now
+          rare, so apply it ONLY where it plausibly remains: fat reused for deep
+          frying at a commercial establishment, informal or imported bakery fat,
+          and any product whose label names partially hydrogenated oil.
+          Do NOT apply N1 to supermarket cookies, crackers, doughnuts, packaged
+          pastries or margarine on the assumption that they contain it. Those are
+          reformulated with palm or interesterified fat, which is saturated and
+          not trans, and they belong to N2.
   N2  -3  A major saturated fat source is the BASE of the dish: fatty red meat,
-          butter, cream, full-fat cheese, coconut milk or coconut oil, palm oil
-          or dendê, lard, chicharrón, condensed or evaporated milk, dulce de
-          leche. "Base" means the dish is built on it, or it is the most
-          prominent ingredient.
+          butter, cream, full-fat cheese, coconut milk or coconut oil, palm or
+          interesterified fat, dendê, lard, chicharrón, condensed or evaporated
+          milk, dulce de leche, or the solid fat of a SWEET commercial laminated
+          or shortening-based baked good — medialuna, croissant, doughnut,
+          packaged sweet pastry, commercial frosting, non-dairy creamer. "Base"
+          means the dish is built on it, or it is the most prominent ingredient.
+          The savoury crust of a home tart or pie is NOT a base: such a dish is
+          built on its filling. Score that crust with N3 and N6 instead.
+          Apply N2 only for an ingredient the description NAMES, or that the dish
+          invariably contains. An ingredient you merely assumed is secondary by
+          definition: N3 at most.
+          Do not apply N2 for a fat you already scored with N1 — one fat is one
+          penalty.
   N3  -2  A saturated fat source is PRESENT BUT SECONDARY: cheese topping,
           cream or béchamel sauce, cooking butter, a splash of cream,
           mayonnaise, queso fresco, a slice of cheese in a sandwich.
@@ -222,6 +241,8 @@ of its examples, or anything of the same kind, is part of the dish.
   N6  -1  Refined grains are the dominant carbohydrate: white bread, white rice,
           standard pasta, pastry, white flour tortilla, white bun, refined corn
           masa, arepa de harina, crackers.
+          A corn tortilla from nixtamalized masa is NOT refined. It is whole
+          maize and belongs to P7, not here.
   N7  -1  Added sugar: a sweet dish, a dessert, a sweetened drink, jam, dulce de
           leche, syrup, sweetened yoghurt, a sugary soft drink, juice with sugar.
   N8  -1  PROXY: ultra-processed convenience product — supermarket ready meal,
@@ -232,11 +253,26 @@ of its examples, or anything of the same kind, is part of the dish.
 
 ## STEP 3 — Apply every positive modifier that applies
 
+Work down this list in order. Apply each line at most once. Where a guard line
+says an ingredient already counted, it counts once and only once — a single
+ingredient never earns two credits.
+
   P1  +2  Strong soluble fiber source: oats, barley, lentils, chickpeas, beans
           (black, pinto, cranberry, white), peas, psyllium, farro.
-  P2  +2  The PRIMARY fat of the dish is unsaturated: olive oil, avocado, nuts,
-          seeds, sunflower or canola oil, tahini.
+  P2  +2  The PRIMARY fat of the dish is unsaturated, and is a real component of
+          the dish rather than a trace: an olive oil dressing or cooking base,
+          avocado, nuts, seeds, tahini, sunflower or canola oil as the dish's
+          main fat.
           Do not apply P2 if N2 applies — a dish has only one primary fat.
+          The fat must be NAMED in the description, or inherent to the dish as
+          avocado is to guacamole. Never apply P2 for a fat you assumed only
+          because the dish was homemade: unsaturated fat earns credit for
+          displacing saturated fat, not for having been the cooking medium.
+          One named exception: a salad served as part of the meal is dressed with
+          oil, so count that dressing as a real unsaturated component even when
+          the description does not name it. The exception lapses when the dish's
+          own fat dominates — not when N2 applies, and not when N5 applies. A
+          side salad does not make a fried dish's primary fat unsaturated.
   P3  +1  Fatty fish rich in omega-3: salmon, sardines, mackerel, anchovies,
           trout, herring, jurel, caballa. Only +1: omega-3 lowers triglycerides
           far more than it lowers LDL, and this scale is LDL only.
@@ -246,14 +282,21 @@ of its examples, or anything of the same kind, is part of the dish.
           textured soy.
   P6  +1  Nuts or seeds are a real component, not a garnish: peanuts, walnuts,
           almonds, cashews, sunflower or pumpkin seeds, peanut butter.
+          Do not apply P6 for nuts or seeds you already scored as the primary fat
+          under P2.
   P7  +1  Whole grains are the dominant carbohydrate: whole wheat, brown rice,
-          quinoa, oats, whole rye, whole maize, amaranth, buckwheat.
+          quinoa, oats, whole rye, whole maize, amaranth, buckwheat. A corn
+          tortilla, tamal or pupusa from nixtamalized masa counts here.
+          Do not apply P7 for a grain you already scored with P1 — oats, barley
+          and farro are in both lists and count once.
   P8  +1  Vegetables or fruit are a substantial part of the dish, not a garnish
           or a sprig.
   P9  +1  Plant sterol or stanol fortified product.
   P10 +1  The main protein is lean: skinless poultry, white fish, shellfish
           (prawns, mussels, squid, clams, octopus), egg white, legumes, low-fat
           cottage cheese.
+          Do not apply P10 for a protein you already scored with P1 or P5 —
+          legumes and soy count once.
 
 ## STEP 4 — Accumulate step by step
 
@@ -279,8 +322,9 @@ Worked example — "Ensalada de garbanzos con tomate, pepino y aceite de oliva",
   P1  +2  chickpeas                                +2
   P2  +2  olive oil is the primary fat             +4
   P8  +1  tomato and cucumber are substantial      +5
-  P10 +1  chickpeas are the lean main protein      +6
-  modifier_sum = +6, whole_plant_only = true
+  P10 is excluded: the chickpeas are the lean main
+  protein, but they already counted under P1       +5
+  modifier_sum = +5, whole_plant_only = true
 
 Worked example — "Supermarket chicken curry ready meal", bought:
   start                                             0
@@ -295,14 +339,15 @@ Worked example — "Supermarket chicken curry ready meal", bought:
 
 Worked example — "Café con leche entera y tres medialunas", bought:
   start                                             0
-  N1  -3  medialunas are a commercial pastry made
-          with hydrogenated or solid fat           -3
-  N2  -3  butter or margarine is the base of the
-          laminated dough, plus whole milk         -6
-  N6  -1  refined wheat flour                      -7
-  N7  -1  added sugar                              -8
-  no positive modifier applies                     -8
-  modifier_sum = -8, has_trans_fat = true, whole_plant_only = false
+  N1 is excluded: a commercial medialuna is made
+  with butter, margarine or palm fat, not with
+  partially hydrogenated oil                        0
+  N2  -3  that solid fat is the base of the
+          laminated dough, plus whole milk         -3
+  N6  -1  refined wheat flour                      -4
+  N7  -1  added sugar                              -5
+  no positive modifier applies                     -5
+  modifier_sum = -5, has_trans_fat = false, whole_plant_only = false
 
 ## STEP 5 — The homemade flag
 
@@ -310,7 +355,10 @@ Worked example — "Café con leche entera y tres medialunas", bought:
 
 - is_homemade = true: assume ordinary home cooking. Do NOT apply N8 or N9 on
   the grounds that a fat is unnamed. If the description names no fat, assume a
-  reasonable home fat for that dish and say so in the rationale.
+  reasonable home fat for that dish and say so in the rationale. That
+  assumption exists to avoid an unfair PENALTY; it earns no CREDIT of its own,
+  so it cannot be the basis for P2 — except for the one case P2 itself names, a
+  salad's dressing.
 - is_homemade = false: the dish was bought or eaten out. If the description does
   not identify the cooking fat, apply N9, assume the less favourable
   preparation typical of that dish sold commercially — more oil, more butter,

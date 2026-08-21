@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { ArrowLeft, ChefHat, Pencil, ShoppingBag, Trash2 } from 'lucide-react'
 import { ConfirmDialog, ErrorState, Skeleton, Spinner } from '@/components/ui'
-import { FactorLists, ScoreBadge } from '@/components/score'
+import { FactorLists, ScoreBadge, ScoreDerivation } from '@/components/score'
 import { apiFetch, errorMessage } from '@/utils/api'
 import { MIN_ENTRY_DATE, formatFullDate, todayLocal } from '@/utils/localDate'
 import type { AnalysisResponse, Entry } from '@/types/api'
@@ -209,6 +209,7 @@ export default function EntryDetail() {
         {/* Read-only, and there is no input anywhere near it. */}
         <p className="mt-3 text-sm text-slate-700">{entry.rationale}</p>
         <FactorLists positive={entry.positive_factors} negative={entry.negative_factors} />
+        <ScoreDerivation entry={entry} />
       </section>
 
       {editing ? (

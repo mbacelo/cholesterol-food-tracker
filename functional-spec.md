@@ -97,10 +97,12 @@ Each dish gets a single **integer score from -5 to +5** for its expected effect 
 | Score | Meaning |
 |---|---|
 | **+4 to +5** | Actively lowers LDL. Built on soluble fiber, plant protein or unsaturated fat, essentially no saturated fat. |
-| **+1 to +3** | Neutral to beneficial. A sound everyday choice. |
+| **+1 to +3** | Favorable to LDL. A sound everyday choice. |
 | **0** | No meaningful effect either way. |
-| **-1 to -3** | Raises LDL. Acceptable occasionally, not routinely. |
-| **-4 to -5** | Strongly raises LDL. Built on saturated or trans fat. |
+| **-1 to -2** | Raises LDL somewhat. Acceptable occasionally, not routinely. |
+| **-3 to -5** | Raises LDL substantially. Built on saturated or trans fat. |
+
+The negative side breaks at **-3**, which is `HARMFUL_SCORE` in `domain/scoring.ts`: at or below it a dish is a real driver rather than a merely imperfect choice. The dashboard counts dishes past that line and the rubric screen bands the scale at it, both reading the one constant.
 
 Scores render on a red-to-green scale (-5 deep red, 0 grey, +5 deep green), used consistently everywhere a score appears, and always shown with the signed number.
 
@@ -112,12 +114,12 @@ Every dish starts at **0** and the modifiers below apply. Quantity is ignored: a
 
 | Factor | Modifier |
 |---|---|
-| Partially hydrogenated oil or industrial trans fat (commercial baked goods, some margarines, packaged fried snacks) | -3 |
-| A major saturated fat source is the base of the dish (fatty red meat, butter, cream, full-fat cheese, coconut oil, palm oil, lard) | -3 |
+| Industrial trans fat from partially hydrogenated oil. Rare enough now to be applied only where it plausibly remains: fat reused for deep frying commercially, informal or imported bakery fat, or a label that names it | -3 |
+| A major saturated fat source is the base of the dish (fatty red meat, butter, cream, full-fat cheese, coconut oil, palm or interesterified fat, lard, or the solid fat of a commercial laminated or shortening-based baked good). Not applied to a fat already scored as trans fat | -3 |
 | A saturated fat source is present but secondary (cheese topping, cream sauce, cooking butter) | -2 |
 | Processed meat (sausage, bacon, salami, ham, hot dog, pate) | -2 |
 | Deep fried, or fried in abundant fat | -2 |
-| Refined grains are the dominant carbohydrate (white bread, white rice, standard pasta, pastry) | -1 |
+| Refined grains are the dominant carbohydrate (white bread, white rice, standard pasta, pastry, *arepa de harina*). A nixtamalized corn tortilla is whole maize and is scored as a whole grain instead | -1 |
 | Added sugar (sweet dish or sweetened drink) | -1 |
 | *Proxy:* ultra-processed convenience product (ready meal, packaged snack, fast food) | -1 |
 | *Proxy:* bought or restaurant food whose cooking fat cannot be identified from the description | -1 |
@@ -127,15 +129,23 @@ Every dish starts at **0** and the modifiers below apply. Quantity is ignored: a
 | Factor | Modifier |
 |---|---|
 | Strong soluble fiber source (oats, barley, legumes, lentils, chickpeas, beans, psyllium) | +2 |
-| The primary fat is unsaturated (olive oil, avocado, nuts, seeds) | +2 |
+| The primary fat is unsaturated **and** a real component of the dish, named in the description or inherent to it (olive oil dressing or base, avocado, nuts, seeds, tahini). Never awarded for a fat assumed because the dish was homemade, nor for the film of oil a dish was merely cooked in | +2 |
 | Fatty fish rich in omega-3 (salmon, sardines, mackerel, anchovies, trout) | +1 |
 | Moderate soluble fiber source (apple, pear, citrus, carrot, Brussels sprouts, flaxseed, aubergine) | +1 |
 | Soy protein is a main component (tofu, tempeh, edamame, soy milk) | +1 |
-| Nuts or seeds are a real component, not a garnish | +1 |
-| Whole grains are the dominant carbohydrate (whole wheat, brown rice, quinoa, oats, whole rye) | +1 |
+| Nuts or seeds are a real component, not a garnish. Not applied to nuts already scored as the primary fat | +1 |
+| Whole grains are the dominant carbohydrate (whole wheat, brown rice, quinoa, oats, whole rye, whole maize including a nixtamalized corn tortilla, tamal or pupusa). Not applied to a grain already scored as a strong soluble fiber source | +1 |
 | Vegetables or fruit are a substantial part of the dish | +1 |
 | Plant sterol or stanol fortified product | +1 |
-| The main protein is lean (skinless poultry, white fish, shellfish, egg white, legumes) | +1 |
+| The main protein is lean (skinless poultry, white fish, shellfish, egg white, legumes). Not applied to legumes or soy already scored under a fiber or soy modifier | +1 |
+
+**What an assumption may and may not do.** Descriptions are short, so the AI reasons about ingredients a dish implies but does not state. That inference is bounded in both directions, because an unbounded one distorts the score whichever way it points.
+
+An assumption may not earn the unsaturated-fat credit. The evidence behind that modifier is substitution evidence — unsaturated fat lowering LDL by displacing saturated fat — so a fat nobody named, or the film of oil a dish was merely cooked in, has displaced nothing. There is one deliberate exception: a salad served with the meal is dressed with oil, and that dressing counts even unnamed. It lapses when the dish's own fat dominates, so a side salad never makes a deep-fried dish read as unsaturated.
+
+An assumption may not earn the *largest penalty* either. An unnamed ingredient may only be included when the dish invariably contains it — cheese in a *tarta de verdura* or *zapallitos rellenos* is optional and must not be invented — and a saturated-fat penalty resting on an assumed ingredient is secondary by definition: N3 at most, never N2. Something nobody mentioned cannot be what the dish is built on. Without this bound the two rules combined pushed every unnamed-fat homemade dish about two points below where it belonged.
+
+**One ingredient, one modifier.** Both tables carry guards against the same ingredient being scored twice: a fat is either trans or saturated, not both; chickpeas are either a fiber source or a lean protein, not both; oats are either strong soluble fiber or a whole grain, not both. Without them a single ingredient could move the score by three points on its own, and the same dish would read as more extreme than it is. Overlaps that describe genuinely different mechanisms — moderate soluble fiber and "vegetables are substantial", for instance — are left to stack.
 
 **Rules applied to the result, in order**
 
@@ -155,9 +165,11 @@ Every dish starts at **0** and the modifiers below apply. Quantity is ignored: a
 > one. This is why the AI contract in §6.3 returns the unclamped total and the
 > app performs all four steps itself.
 
+**Note on savoury pastry.** The crust of a home tart or pie is not a *base*: such a dish is built on its filling. Its fat is secondary (N3) and its flour refined (N6). Only a sweet commercial laminated or shortening-based baked good — a medialuna, a croissant, a packaged sweet pastry — is built on its fat.
+
 **Note on the homemade flag.** `is_homemade` is context for the AI. When a dish is marked as bought and the description does not identify the cooking fat, the AI assumes a less favorable preparation and says so in the rationale. This lives in `scoring_prompt` and can be softened or removed by the administrator.
 
-Deliberately *not* penalized: dietary cholesterol as a general category, organ meat, egg yolks, and shellfish specifically. Saturated and trans fat are the dominant dietary drivers of LDL, and lean shellfish counts here as a lean protein.
+Deliberately *not* penalized: dietary cholesterol as a general category, organ meat, egg yolks, and shellfish specifically. Saturated and trans fat are the dominant dietary drivers of LDL, and lean shellfish counts here as a lean protein. For organ meat the cooking fat is scored, not the organ.
 
 ### 4.3 Rationale
 

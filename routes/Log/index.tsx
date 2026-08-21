@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 import { Camera, ChefHat, Images, PenLine, RotateCcw, ShoppingBag } from 'lucide-react'
 import { ScreenHeader } from '@/components/shell'
 import { ConfirmDialog, ErrorState, Skeleton, Spinner } from '@/components/ui'
-import { FactorLists, ScoreBadge } from '@/components/score'
+import { FactorLists, ScoreBadge, ScoreDerivation } from '@/components/score'
 import { apiFetch, errorMessage } from '@/utils/api'
 import { compressImage, ImageError } from '@/utils/image'
 import { MIN_ENTRY_DATE, todayLocal } from '@/utils/localDate'
@@ -377,6 +377,7 @@ export default function Log() {
             positive={analysis.positive_factors}
             negative={analysis.negative_factors}
           />
+          <ScoreDerivation entry={analysis} />
           {dirty ? (
             <p role="status" className="mt-3 text-sm text-amber-700">
               Este puntaje corresponde al texto anterior. Toca Recalcular para actualizarlo.

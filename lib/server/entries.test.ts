@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { finalizeScore } from '../../domain/scoring.js'
 import { db, resetDb } from './db'
 import {
   createEntry,
@@ -143,14 +144,40 @@ describe('the row-to-response boundary', () => {
       'created_at',
       'description',
       'entry_date',
+      'has_trans_fat',
       'id',
       'is_homemade',
+      'modifier_sum',
       'negative_factors',
       'positive_factors',
+      'proxy_ultra_processed',
+      'proxy_unidentified_fat',
       'rationale',
       'score',
       'updated_at',
+      'whole_plant_only',
     ])
+  })
+
+  it('stores the breakdown the score was derived from', async () => {
+    // Without these, no screen can show how the number was reached -- and the
+    // stored score would be unauditable after the fact.
+    const entry = await makeEntry(aliceId, ALICE.email, 'Milanesa fried with cheese and white rice')
+    expect(Number.isInteger(entry.modifier_sum)).toBe(true)
+    expect(typeof entry.has_trans_fat).toBe('boolean')
+    expect(typeof entry.whole_plant_only).toBe('boolean')
+    expect(typeof entry.proxy_ultra_processed).toBe('boolean')
+    expect(typeof entry.proxy_unidentified_fat).toBe('boolean')
+    // The stored score must be exactly what these inputs finalize to.
+    expect(
+      finalizeScore({
+        modifierSum: entry.modifier_sum as number,
+        hasTransFat: entry.has_trans_fat as boolean,
+        wholePlantOnly: entry.whole_plant_only as boolean,
+        proxyUltraProcessed: entry.proxy_ultra_processed as boolean,
+        proxyUnidentifiedFat: entry.proxy_unidentified_fat as boolean,
+      }).score,
+    ).toBe(entry.score)
   })
 })
 
@@ -194,6 +221,18 @@ describe('updating an entry', () => {
     expect(result.rescored).toBe(true)
     expect(result.entry.score).toBeLessThan(entry.score)
     expect(result.entry.rationale).not.toBe(entry.rationale)
+    // The breakdown has to move with the score, or the entry screen would show
+    // the new number explained by the old arithmetic.
+    expect(result.entry.modifier_sum).not.toBe(entry.modifier_sum)
+    expect(
+      finalizeScore({
+        modifierSum: result.entry.modifier_sum as number,
+        hasTransFat: result.entry.has_trans_fat as boolean,
+        wholePlantOnly: result.entry.whole_plant_only as boolean,
+        proxyUltraProcessed: result.entry.proxy_ultra_processed as boolean,
+        proxyUnidentifiedFat: result.entry.proxy_unidentified_fat as boolean,
+      }).score,
+    ).toBe(result.entry.score)
   })
 
   it('does not re-score, or change the score, on a date-only edit', async () => {
@@ -205,6 +244,7 @@ describe('updating an entry', () => {
     expect(result.rescored).toBe(false)
     expect(result.entry.score).toBe(entry.score)
     expect(result.entry.rationale).toBe(entry.rationale)
+    expect(result.entry.modifier_sum).toBe(entry.modifier_sum)
     expect(result.entry.entry_date).toBe('2026-02-02')
   })
 

@@ -57,6 +57,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
       negative_factors: result.negativeFactors,
       food_detected: result.foodDetected,
       cached: result.cached,
+      modifier_sum: result.modifierSum,
+      has_trans_fat: result.hasTransFat,
+      whole_plant_only: result.wholePlantOnly,
+      proxy_ultra_processed: result.proxyUltraProcessed,
+      proxy_unidentified_fat: result.proxyUnidentifiedFat,
     })
   } catch (err) {
     return handleError(res, err, 'POST /api/analyze')

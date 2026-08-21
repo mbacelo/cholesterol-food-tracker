@@ -15,6 +15,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { HARMFUL_SCORE } from '@/domain/scoring'
 import { ScreenHeader } from '@/components/shell'
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui'
 import { ScoreAverage } from '@/components/score'
@@ -27,8 +28,6 @@ const PERIODS = [7, 30, 90] as const
 /** Below these, a chart says so rather than drawing an empty axis. */
 const MIN_TREND_DAYS = 3
 const MIN_DISTRIBUTION_ENTRIES = 5
-/** At or below this, a dish is a real driver rather than a merely imperfect choice. */
-const HARMFUL_SCORE = -3
 
 /** Answers one question first: am I meeting my goal? (functional spec §6.7) */
 export default function Dashboard() {

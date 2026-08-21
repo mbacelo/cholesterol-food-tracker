@@ -1,5 +1,14 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { MAX_SCORE, MIN_SCORE, finalizeScore, isValidScore, type ScoreInputs } from './scoring'
+import {
+  HARMFUL_SCORE,
+  MAX_SCORE,
+  MIN_SCORE,
+  finalizeScore,
+  isValidScore,
+  type ScoreInputs,
+} from './scoring'
 
 /** A neutral analysis. Each test overrides only what it is about. */
 function inputs(over: Partial<ScoreInputs> = {}): ScoreInputs {
@@ -161,5 +170,34 @@ describe('isValidScore', () => {
     expect(isValidScore(-6)).toBe(false)
     expect(isValidScore(1.5)).toBe(false)
     expect(isValidScore(Number.NaN)).toBe(false)
+  })
+})
+
+describe('HARMFUL_SCORE is one line, drawn once', () => {
+  // The dashboard counts "platos de -3 o peor" and the rubric screen bands the
+  // scale. They used to disagree about -3: alarming on one screen, "aceptable de
+  // vez en cuando" on the other. Reading the sources as text is crude, but these
+  // are .tsx files and the unit suites deliberately load no React.
+  const ROOT = fileURLToPath(new URL('..', import.meta.url))
+  const source = (file: string): string => readFileSync(`${ROOT}${file}`, 'utf8')
+
+  it('is the boundary the scale bands break at', () => {
+    expect(HARMFUL_SCORE).toBe(-3)
+    expect(isValidScore(HARMFUL_SCORE)).toBe(true)
+  })
+
+  it('is imported by both screens rather than restated', () => {
+    for (const file of ['routes/Rubric.tsx', 'routes/Dashboard.tsx']) {
+      const text = source(file)
+      // Matched loosely rather than as a literal: scripts/audit-isolation.mjs
+      // forbids the browser path alias from appearing anywhere under domain/.
+      expect(text).toMatch(/import \{ HARMFUL_SCORE \} from '[^']*domain\/scoring'/)
+      expect(text).not.toMatch(/const HARMFUL_SCORE/)
+    }
+  })
+
+  it('is what the rubric screen builds its worst band from', () => {
+    // Not a hardcoded '-3 a -5' string: the band has to move if the line moves.
+    expect(source('routes/Rubric.tsx')).toContain('range: `${HARMFUL_SCORE} a -5`')
   })
 })

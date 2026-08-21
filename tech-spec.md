@@ -122,7 +122,8 @@ utils/api.ts            apiFetch, ApiError, and the error-code → copy map
 tools/devApiPlugin.ts   the dev API plugin, and the two drift-prone lists
 scripts/audit-isolation.mjs   the §4 audit, plus four adjacent invariants
 scripts/generate-seed.mjs     regenerates 002_seed_prompts.sql from the TS constants
-db/migrations/          001_init.sql (schema), 002_seed_prompts.sql (generated)
+db/migrations/          001_init.sql (schema), 002_seed_prompts.sql (generated),
+                        003_entry_breakdown.sql (the stored ScoreInputs)
 ```
 
 `domain/` holds every rule that is arithmetic or a decision table, as pure functions with no network or database access. All derived figures — daily averages, period averages, days on target, incomplete-day flags — come from `aggregation.ts`. **Never recompute an average ad hoc.** This is what makes the business rules in functional spec §7 testable without a network call, and it is the highest-value test surface in the app.
@@ -184,6 +185,13 @@ create table food_entries (
   rationale   text not null,
   positive_factors jsonb not null default '[]',  -- [{label, reason}]
   negative_factors jsonb not null default '[]',
+  -- What domain/scoring.ts turned into `score`: the ScoreInputs it was given.
+  -- Nullable, because entries predating them are not re-scored (see §7).
+  modifier_sum           int,      -- the raw running total, deliberately unclamped
+  has_trans_fat          boolean,
+  whole_plant_only       boolean,
+  proxy_ultra_processed  boolean,
+  proxy_unidentified_fat boolean,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
@@ -409,7 +417,7 @@ The budget is checked read-only in the handler and **consumed inside `analyze()`
 | Cross-user data leak from a query missing its `user_id` | Single accessor file, `userId` always first and always in the `where`, grep audit (§4) |
 | A bad prompt edit silently degrades all future scoring | `previous_body` one-click revert, version bump, fixture suite run after saving, cache invalidated by version |
 | Score drift on unseen descriptions | `score_cache` for repeats, the step-by-step rubric, the three post-rules re-applied in our own code from model-returned booleans |
-| The model returns a score inconsistent with its own factors | `domain/scoring.ts` owns the final integer; the model's number is an input, not the answer |
+| The model returns a score inconsistent with its own factors | `domain/scoring.ts` owns the final integer, and the five inputs it derived that integer from are stored on the entry (`modifier_sum` plus the four booleans) so a screen can re-derive the ordered rule steps by calling `finalizeScore` again. The steps are never persisted as prose: the rules stay in one place, and no stored sentence can outlive the rule it describes. Those columns are nullable — entries logged before they existed have no breakdown and are not re-scored, so the panel is simply absent; the model's number is an input, not the answer |
 | LLM cost creep from re-scoring on every edit | One call per analysis, client-side compression, `score_cache`, durable daily cap in `ai_usage` |
 | Vision model misreads hidden cooking fats | `is_homemade` supplied as context; the description is always editable and always re-scored |
 | Timezone skew rejecting a legitimate "today" | Client-supplied local date plus `tz_offset_minutes`, DB constraint carries one day of slack |

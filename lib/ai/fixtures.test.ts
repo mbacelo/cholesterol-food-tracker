@@ -264,6 +264,52 @@ const FIXTURES: Fixture[] = [
     max: 5,
     because: 'shellfish again, steamed, with no added fat at all',
   },
+
+  // ---- homemade dishes that name NO fat -----------------------------------
+  // Every fixture above names its oil ("... y aceite de oliva"), which is the
+  // case the rubric credits most readily. Real entries do not: someone typing
+  // "Pascualina casera" names no fat at all. That gap let two opposite faults
+  // ship green -- an assumed cheese charged at N2, and an assumed dressing
+  // credited at nothing -- so this group exists to pin both. The bands are set
+  // from observed scores and positioned so the specific regression fails.
+  {
+    description: 'Pascualina casera con ensalada de lechuga y tomates',
+    isHomemade: true,
+    min: -1,
+    max: 1,
+    because:
+      'chard, egg and pastry with a dressed salad: roughly neutral. Invented cheese at N2 would drag it to -3',
+  },
+  {
+    description: 'Tarta de acelga',
+    isHomemade: true,
+    min: -2,
+    max: 0,
+    because:
+      'the same tart with no salad, so no dressing to credit: the pastry costs it, but cheese nobody named must not',
+  },
+  {
+    description: 'Milanesa de pollo al horno con ensalada',
+    isHomemade: true,
+    min: 2,
+    max: 4,
+    because: 'baked not fried, lean poultry, vegetables and a dressed salad: a genuinely good meal',
+  },
+  {
+    description: 'Zapallitos rellenos',
+    isHomemade: true,
+    min: 0,
+    max: 2,
+    because: 'the filling is unspecified; assuming cheese into it would invent the penalty',
+  },
+  {
+    description: 'Milanesa frita con ensalada',
+    isHomemade: true,
+    min: -3,
+    max: -1,
+    because:
+      'the guard on the salad-dressing credit: a side salad must not make a deep-fried dish read as unsaturated',
+  },
 ]
 
 describe.skipIf(!ENABLED)('scoring fixtures (real model, costs money)', () => {

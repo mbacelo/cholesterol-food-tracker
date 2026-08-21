@@ -55,8 +55,8 @@ too, and defaults to `low` on both providers.
 |---|---|
 | `npm run dev` | UI and `/api` together, real handlers in-process |
 | `npm run verify` | typecheck, tests, isolation audit — run before deploying |
-| `npm test` | 212 tests; no credentials, no network, no spend |
-| `RUN_AI_FIXTURES=1 npm test` | adds the ~31 scoring fixtures — **calls the real model and costs money** |
+| `npm test` | 216 tests; no credentials, no network, no spend |
+| `set -a && . ./.env.local && set +a && RUN_AI_FIXTURES=1 npm test` | adds the ~31 scoring fixtures — **calls the real model and costs money** |
 | `npm run build` | typecheck then production build |
 | `npm run audit` | the data-isolation audit on its own |
 | `npm run generate:icons` | regenerate PWA PNGs from `public/icon.svg` |
@@ -64,10 +64,21 @@ too, and defaults to `low` on both providers.
 `npm run preview` serves the UI only — **`/api/*` returns `index.html` there**,
 because the dev plugin does not run in preview. That is expected, not an outage.
 
+Vitest does not read `.env.local` — only the Vite dev server does. The fixture
+row above sources it first for that reason; `RUN_AI_FIXTURES=1 npm test` on its
+own fails with `AI_PROVIDER must be one of ...` before reaching the model, so it
+costs nothing but tells you nothing either.
+
+A prompt edit does **not** reach an existing local database. `002_seed_prompts.sql`
+is `on conflict (key) do nothing` and is already applied, so after editing
+`lib/ai/prompts/defaults.ts` and regenerating the seed, the `prompts` row still
+holds the old body and the fixtures score against it. Update that row directly, or
+delete `.dev-data/` to re-migrate from scratch — which also discards local entries.
+
 ## Deploying
 
-1. Neon project; run `db/migrations/001_init.sql` then `002_seed_prompts.sql` in
-   the SQL editor.
+1. Neon project; run every file in `db/migrations/` in filename order in the
+   SQL editor.
 2. Google OAuth client ID.
 3. Set every variable from `.env.local.example` in Vercel, for Production **and**
    Preview, except `DEBUG_AUTH`/`DEBUG_ADMIN` — those are ignored when deployed

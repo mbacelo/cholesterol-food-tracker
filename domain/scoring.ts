@@ -37,6 +37,18 @@ export const TRANS_FAT_CAP = -2
 /** Functional spec §4.2 rule 3. */
 export const WHOLE_PLANT_FLOOR = 1
 
+/**
+ * At or below this, a dish is a real driver of LDL rather than a merely
+ * imperfect choice.
+ *
+ * Not a scoring rule -- nothing in `finalizeScore` reads it. It lives here
+ * because two screens draw the same line and used to draw it in different
+ * places: the dashboard counted "platos de -3 o peor" as the thing to worry
+ * about while the rubric screen filed -3 under "aceptable de vez en cuando".
+ * One constant, so the two cannot disagree again.
+ */
+export const HARMFUL_SCORE = -3
+
 export type ScoreRule =
   | 'proxy_cap'
   | 'trans_fat_cap'

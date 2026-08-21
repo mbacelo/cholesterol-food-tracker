@@ -2,6 +2,7 @@ import { ChefHat, Minus, ShoppingBag, TrendingDown, TrendingUp } from 'lucide-re
 import { Link } from 'react-router'
 import { formatAverage, formatScore, scoreColor } from '@/utils/scoreColor'
 import { formatDayLabel } from '@/utils/localDate'
+import { finalizeScore, type ScoreRule } from '@/domain/scoring'
 import type { DayStatus } from '@/domain/aggregation'
 import type { Entry, Factor } from '@/types/api'
 
@@ -111,6 +112,83 @@ export function FactorLists({
         </ul>
       ) : null}
     </div>
+  )
+}
+
+/**
+ * The Spanish name for each post-rule. The `why` strings on a ScoreStep are
+ * developer prose, in English, and are not for display.
+ */
+const RULE_COPY: Record<ScoreRule, string> = {
+  proxy_cap: 'Las dos penalizaciones por «no se puede saber» suman −1 como máximo',
+  trans_fat_cap: 'La grasa trans industrial limita el puntaje a −2',
+  whole_plant_floor: 'Plato basado solo en vegetales, así que recibe al menos +1',
+  whole_plant_floor_suppressed: 'No se aplica el mínimo vegetal: el plato tiene grasa trans',
+  clamp: 'El resultado se limita al rango −5..+5',
+}
+
+/** The five stored inputs. Shaped so both an Entry and an analysis preview fit. */
+export interface ScoreDerivationInput {
+  modifier_sum: number | null
+  has_trans_fat: boolean | null
+  whole_plant_only: boolean | null
+  proxy_ultra_processed: boolean | null
+  proxy_unidentified_fat: boolean | null
+}
+
+/**
+ * How the score was reached: the modifier sum, then each post-rule that moved it.
+ *
+ * The steps are re-derived here by calling the same `finalizeScore` the server
+ * used, rather than stored as text. The rules live in exactly one place, so this
+ * panel cannot describe a rule the scoring no longer applies.
+ *
+ * Renders nothing for an entry logged before the breakdown was stored.
+ */
+export function ScoreDerivation({ entry }: { entry: ScoreDerivationInput }) {
+  if (entry.modifier_sum === null) return null
+
+  const { score, modifierSum, steps } = finalizeScore({
+    modifierSum: entry.modifier_sum,
+    hasTransFat: entry.has_trans_fat ?? false,
+    wholePlantOnly: entry.whole_plant_only ?? false,
+    proxyUltraProcessed: entry.proxy_ultra_processed ?? false,
+    proxyUnidentifiedFat: entry.proxy_unidentified_fat ?? false,
+  })
+
+  return (
+    <details className="mt-3 rounded-lg bg-slate-50 px-3 py-2">
+      <summary className="tap cursor-pointer text-xs font-semibold text-slate-600">
+        Cómo se llegó a este número
+      </summary>
+      <dl className="mt-2 space-y-1 text-xs text-slate-600">
+        <div className="flex items-baseline gap-2">
+          <dt className="flex-1">Suma de los modificadores del plato</dt>
+          <dd className="font-mono font-semibold tabular-nums">{formatScore(modifierSum)}</dd>
+        </div>
+        {steps.length === 0 ? (
+          // Otherwise the sum and the score are the same number twice over, with
+          // nothing saying why -- which reads as a bug rather than as "nothing
+          // further applied".
+          <div>
+            <dt className="text-slate-500">Ninguna de las cuatro reglas finales lo modificó</dt>
+          </div>
+        ) : (
+          steps.map((step) => (
+            <div key={step.rule} className="flex items-baseline gap-2">
+              <dt className="flex-1">{RULE_COPY[step.rule]}</dt>
+              <dd className="font-mono tabular-nums">
+                {step.from === step.to ? '—' : formatScore(step.to)}
+              </dd>
+            </div>
+          ))
+        )}
+        <div className="flex items-baseline gap-2 border-t border-slate-200 pt-1 font-semibold text-slate-900">
+          <dt className="flex-1">Puntaje</dt>
+          <dd className="font-mono tabular-nums">{formatScore(score)}</dd>
+        </div>
+      </dl>
+    </details>
   )
 }
 

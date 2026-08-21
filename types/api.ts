@@ -14,6 +14,15 @@ export interface Entry {
   rationale: string
   positive_factors: Factor[]
   negative_factors: Factor[]
+  /**
+   * The scoring inputs behind `score`. Null for entries logged before the
+   * breakdown was stored; screens render the breakdown only when present.
+   */
+  modifier_sum: number | null
+  has_trans_fat: boolean | null
+  whole_plant_only: boolean | null
+  proxy_ultra_processed: boolean | null
+  proxy_unidentified_fat: boolean | null
   created_at: string
   updated_at: string
 }
@@ -38,6 +47,12 @@ export interface AnalysisResponse {
   negative_factors: Factor[]
   food_detected: boolean
   cached: boolean
+  /** Lets the Log preview show the same breakdown the saved entry will show. */
+  modifier_sum: number
+  has_trans_fat: boolean
+  whole_plant_only: boolean
+  proxy_ultra_processed: boolean
+  proxy_unidentified_fat: boolean
 }
 
 export interface DayMeta {

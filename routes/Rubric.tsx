@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
+import { HARMFUL_SCORE } from '@/domain/scoring'
 import { ScoreBadge } from '@/components/score'
 import { NEGATIVE_MODIFIERS, POSITIVE_MODIFIERS, type Modifier } from '@/lib/ai/prompts/defaults'
 
@@ -17,12 +18,17 @@ import { NEGATIVE_MODIFIERS, POSITIVE_MODIFIERS, type Modifier } from '@/lib/ai/
  * note at the bottom says so rather than pretending otherwise.
  */
 
+/**
+ * The negative side breaks at HARMFUL_SCORE, the same line the dashboard draws
+ * when it counts "platos de -3 o peor". The two screens used to disagree about
+ * whether -3 was acceptable.
+ */
 const SCALE = [
   { range: '+4 a +5', meaning: 'Baja el LDL activamente. Basado en fibra soluble, proteína vegetal o grasa insaturada, prácticamente sin grasa saturada.', score: 5 },
-  { range: '+1 a +3', meaning: 'De neutro a beneficioso. Una buena opción para todos los días.', score: 2 },
+  { range: '+1 a +3', meaning: 'Favorable al LDL. Una buena opción para todos los días.', score: 2 },
   { range: '0', meaning: 'Sin efecto relevante en ningún sentido.', score: 0 },
-  { range: '-1 a -3', meaning: 'Sube el LDL. Aceptable de vez en cuando, no a diario.', score: -2 },
-  { range: '-4 a -5', meaning: 'Sube mucho el LDL. Basado en grasa saturada o trans.', score: -5 },
+  { range: '-1 a -2', meaning: 'Sube algo el LDL. Aceptable de vez en cuando, no a diario.', score: -1 },
+  { range: `${HARMFUL_SCORE} a -5`, meaning: 'Sube el LDL de forma importante. Basado en grasa saturada o trans.', score: -5 },
 ]
 
 export default function Rubric() {
@@ -75,9 +81,10 @@ export default function Rubric() {
       <section aria-label="Sin penalización" className="mt-5 rounded-card bg-white p-4">
         <h2 className="text-sm font-semibold text-slate-900">Deliberadamente sin penalización</h2>
         <p className="mt-2 text-sm text-slate-700">
-          El colesterol de la dieta como categoría general, y los mariscos en particular. La grasa
-          saturada y la trans son los principales factores dietéticos del LDL, y los mariscos
-          magros cuentan aquí como proteína magra.
+          El colesterol de la dieta como categoría general: los mariscos, la yema de huevo y las
+          vísceras no bajan el puntaje. La grasa saturada y la trans son los principales factores
+          dietéticos del LDL. Los mariscos magros cuentan aquí como proteína magra, y de las
+          vísceras se puntúa su grasa de cocción, no el órgano.
         </p>
       </section>
 

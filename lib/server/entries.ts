@@ -37,6 +37,15 @@ export interface EntryPublic {
   rationale: string
   positive_factors: Factor[]
   negative_factors: Factor[]
+  /**
+   * The domain/scoring.ts inputs behind `score`, so a screen can show how the
+   * number was reached. Null for every entry logged before migration 003.
+   */
+  modifier_sum: number | null
+  has_trans_fat: boolean | null
+  whole_plant_only: boolean | null
+  proxy_ultra_processed: boolean | null
+  proxy_unidentified_fat: boolean | null
   created_at: string
   updated_at: string
 }
@@ -131,15 +140,21 @@ export async function createEntry(
   const rows = await db()<EntryRow>`
     insert into food_entries (
       id, user_id, entry_date, description, is_homemade,
-      score, rationale, positive_factors, negative_factors
+      score, rationale, positive_factors, negative_factors,
+      modifier_sum, has_trans_fat, whole_plant_only,
+      proxy_ultra_processed, proxy_unidentified_fat
     ) values (
       ${randomUUID()}, ${userId}, ${input.entryDate}, ${result.description}, ${input.isHomemade},
       ${result.score}, ${result.rationale},
       ${JSON.stringify(result.positiveFactors)}::jsonb,
-      ${JSON.stringify(result.negativeFactors)}::jsonb
+      ${JSON.stringify(result.negativeFactors)}::jsonb,
+      ${result.modifierSum}, ${result.hasTransFat}, ${result.wholePlantOnly},
+      ${result.proxyUltraProcessed}, ${result.proxyUnidentifiedFat}
     )
     returning id, entry_date::text as entry_date, description, is_homemade, score, rationale,
-              positive_factors, negative_factors, created_at, updated_at
+              positive_factors, negative_factors, modifier_sum, has_trans_fat,
+              whole_plant_only, proxy_ultra_processed, proxy_unidentified_fat,
+              created_at, updated_at
   `
   return toPublic(oneOr404(rows))
 }
@@ -147,7 +162,9 @@ export async function createEntry(
 export async function listEntriesForDate(userId: string, date: string): Promise<EntryPublic[]> {
   const rows = await db()<EntryRow>`
     select id, entry_date::text as entry_date, description, is_homemade, score, rationale,
-           positive_factors, negative_factors, created_at, updated_at
+           positive_factors, negative_factors, modifier_sum, has_trans_fat,
+           whole_plant_only, proxy_ultra_processed, proxy_unidentified_fat,
+           created_at, updated_at
       from food_entries
      where user_id = ${userId} and entry_date = ${date}
      order by created_at asc
@@ -183,7 +200,9 @@ export async function listEntries(
 
   const rows = await db()<EntryRow>`
     select id, entry_date::text as entry_date, description, is_homemade, score, rationale,
-           positive_factors, negative_factors, created_at, updated_at
+           positive_factors, negative_factors, modifier_sum, has_trans_fat,
+           whole_plant_only, proxy_ultra_processed, proxy_unidentified_fat,
+           created_at, updated_at
       from food_entries
      where user_id = ${userId}
        and (${search}::text is null or description ilike '%' || ${search}::text || '%')
@@ -221,7 +240,9 @@ export async function listEntries(
 export async function getEntry(userId: string, entryId: string): Promise<EntryPublic> {
   const rows = await db()<EntryRow>`
     select id, entry_date::text as entry_date, description, is_homemade, score, rationale,
-           positive_factors, negative_factors, created_at, updated_at
+           positive_factors, negative_factors, modifier_sum, has_trans_fat,
+           whole_plant_only, proxy_ultra_processed, proxy_unidentified_fat,
+           created_at, updated_at
       from food_entries
      where id = ${entryId} and user_id = ${userId}
   `
@@ -262,7 +283,9 @@ export async function updateEntry(
          set entry_date = ${entryDate}, updated_at = now()
        where id = ${entryId} and user_id = ${userId}
       returning id, entry_date::text as entry_date, description, is_homemade, score, rationale,
-                positive_factors, negative_factors, created_at, updated_at
+                positive_factors, negative_factors, modifier_sum, has_trans_fat,
+                whole_plant_only, proxy_ultra_processed, proxy_unidentified_fat,
+                created_at, updated_at
     `
     return { entry: toPublic(oneOr404(rows)), rescored: false }
   }
@@ -286,10 +309,17 @@ export async function updateEntry(
            rationale = ${result.rationale},
            positive_factors = ${JSON.stringify(result.positiveFactors)}::jsonb,
            negative_factors = ${JSON.stringify(result.negativeFactors)}::jsonb,
+           modifier_sum = ${result.modifierSum},
+           has_trans_fat = ${result.hasTransFat},
+           whole_plant_only = ${result.wholePlantOnly},
+           proxy_ultra_processed = ${result.proxyUltraProcessed},
+           proxy_unidentified_fat = ${result.proxyUnidentifiedFat},
            updated_at = now()
      where id = ${entryId} and user_id = ${userId}
     returning id, entry_date::text as entry_date, description, is_homemade, score, rationale,
-              positive_factors, negative_factors, created_at, updated_at
+              positive_factors, negative_factors, modifier_sum, has_trans_fat,
+              whole_plant_only, proxy_ultra_processed, proxy_unidentified_fat,
+              created_at, updated_at
   `
   return { entry: toPublic(oneOr404(rows)), rescored: true }
 }

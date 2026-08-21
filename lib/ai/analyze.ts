@@ -43,6 +43,16 @@ export interface AnalyzeResult {
   foodDetected: boolean
   /** True when this came from score_cache: no model call, no budget consumed. */
   cached: boolean
+  /**
+   * The inputs domain/scoring.ts turned into `score`, carried through so they
+   * can be stored alongside it. A screen re-derives the rule steps from these
+   * by calling `finalizeScore` again -- the rules stay in one place.
+   */
+  modifierSum: number
+  hasTransFat: boolean
+  wholePlantOnly: boolean
+  proxyUltraProcessed: boolean
+  proxyUnidentifiedFat: boolean
 }
 
 export async function analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
@@ -217,6 +227,11 @@ function finish(
     negativeFactors: analysis.negative_factors,
     foodDetected: analysis.food_detected,
     cached,
+    modifierSum: breakdown.modifierSum,
+    hasTransFat: analysis.has_trans_fat,
+    wholePlantOnly: analysis.whole_plant_only,
+    proxyUltraProcessed: analysis.proxy_ultra_processed,
+    proxyUnidentifiedFat: analysis.proxy_unidentified_fat,
   }
 }
 
