@@ -18,10 +18,10 @@ export type ApiErrorCode =
   | 'method_not_allowed'
   | 'payload_too_large'
   | 'conflict'
+  | 'already_invited'
   | 'rate_limited'
   | 'quota_exceeded'
   | 'nothing_to_revert'
-  | 'no_food_detected'
   | 'ai_unavailable'
   | 'misconfigured'
   | 'internal_error'
@@ -36,10 +36,10 @@ export const ERROR_COPY: Record<ApiErrorCode, string> = {
   method_not_allowed: 'Algo de esa solicitud no era válido.',
   payload_too_large: 'Esa foto sigue siendo muy grande incluso comprimida. Inténtalo de nuevo.',
   conflict: 'Eso cambió mientras lo mirabas. Recarga e inténtalo de nuevo.',
+  already_invited: 'Ese correo ya está en la lista de invitados.',
   rate_limited: 'Demasiadas solicitudes seguidas. Espera un momento y reinténtalo.',
   quota_exceeded: 'Llegaste al límite de análisis de hoy. Inténtalo de nuevo mañana.',
   nothing_to_revert: 'No hay una versión anterior para restaurar.',
-  no_food_detected: 'No pude identificar comida en esa foto.',
   ai_unavailable: 'El puntaje no está disponible ahora. Inténtalo en un momento.',
   misconfigured: 'La app no está del todo configurada. Revisa los ajustes del servidor.',
   internal_error: 'Algo salió mal de nuestro lado.',

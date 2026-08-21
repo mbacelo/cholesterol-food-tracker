@@ -19,10 +19,13 @@ export default function Me() {
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [exporting, setExporting] = useState(false)
+  /** The slider value mid-drag. Non-null only while the finger is down. */
+  const [dragging, setDragging] = useState<number | null>(null)
 
   const change = useCallback(
     async (patch: Partial<typeof settings>) => {
       setError(null)
+      setDragging(null)
       try {
         await updateSettings(patch)
         setSaved(true)
@@ -62,6 +65,13 @@ export default function Me() {
 
   const target = settings.daily_average_target
 
+  const commitDrag = useCallback(() => {
+    setDragging((value) => {
+      if (value !== null && value !== target) void change({ daily_average_target: value })
+      return null
+    })
+  }, [change, target])
+
   return (
     <>
       <ScreenHeader title="Perfil" subtitle={user.email} />
@@ -82,16 +92,22 @@ export default function Me() {
           >
             <Minus className="size-4" aria-hidden="true" />
           </button>
+          {/* `dragging` is the value under the finger; it is rendered but not
+              saved. Writing on every onChange sent one PATCH per drag tick --
+              about fourteen concurrent writes across the full range, with no
+              sequencing, so a slow early response could land last and win. The
+              write happens once, when the finger comes up. */}
           <input
             type="range"
             min={TARGET_MIN}
             max={TARGET_MAX}
             step={TARGET_STEP}
-            value={target}
+            value={dragging ?? target}
             aria-label="Objetivo de promedio diario"
-            onChange={(event) =>
-              void change({ daily_average_target: Number(event.target.value) })
-            }
+            onChange={(event) => setDragging(Number(event.target.value))}
+            onPointerUp={commitDrag}
+            onKeyUp={commitDrag}
+            onBlur={commitDrag}
             className="flex-1"
           />
           <button
@@ -103,7 +119,8 @@ export default function Me() {
           >
             <Plus className="size-4" aria-hidden="true" />
           </button>
-          <ScoreBadge score={target} size="md" />
+          {/* Follows the finger, so the number under the thumb is the one shown. */}
+          <ScoreBadge score={dragging ?? target} size="md" />
         </div>
       </section>
 

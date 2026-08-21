@@ -55,7 +55,8 @@ too, and defaults to `low` on both providers.
 |---|---|
 | `npm run dev` | UI and `/api` together, real handlers in-process |
 | `npm run verify` | typecheck, tests, isolation audit — run before deploying |
-| `npm test` | 208 tests; no credentials, no network, no spend |
+| `npm test` | 212 tests; no credentials, no network, no spend |
+| `RUN_AI_FIXTURES=1 npm test` | adds the ~31 scoring fixtures — **calls the real model and costs money** |
 | `npm run build` | typecheck then production build |
 | `npm run audit` | the data-isolation audit on its own |
 | `npm run generate:icons` | regenerate PWA PNGs from `public/icon.svg` |

@@ -200,16 +200,35 @@ describe('the cache is the determinism guarantee', () => {
     process.env.AI_DAILY_CALL_LIMIT = '100'
   })
 
-  it('stores no description in the cache row', async () => {
-    // score_cache is global and not user-scoped, so food text must not land in it.
+  it('stores no food text in the cache row', async () => {
+    // score_cache is global and not user-scoped -- the one table in an otherwise
+    // strictly isolated schema -- so food text must not land in it, or it becomes
+    // a cross-user record of what people ate (001_init.sql, tech spec 3).
     await analyze({ description, isHomemade: true, email: EMAIL, localDay: DAY })
     const rows = await db()<{ result: Record<string, unknown> }>`select result from score_cache`
     expect(rows.length).toBeGreaterThan(0)
-    // The stored payload keeps the description only because it IS the key input
-    // the caller already holds; assert the row cannot be read back for a
-    // DIFFERENT description than the one that produced it.
-    const stored = rows[0]!.result
-    expect(normalizeDescription(String(stored.description))).toBe(normalizeDescription(description))
+    expect(rows[0]!.result.description).toBe('')
+    // Nothing else in the payload carries the dish either.
+    expect(JSON.stringify(rows[0]!.result)).not.toContain('lentil')
+  })
+
+  it('returns the caller own text on a hit, not the cached variant', async () => {
+    // The cache key normalizes case and whitespace, so a hit can come from a
+    // differently typed variant of the same dish. Functional spec 6.3 requires the
+    // user's text back character for character, and the model is never called on a
+    // hit -- so this is the only place that rule can hold.
+    const first = await analyze({ description, isHomemade: true, email: EMAIL, localDay: DAY })
+    expect(first.description).toBe(description)
+
+    const shouted = description.toUpperCase()
+    const hit = await analyze({
+      description: shouted,
+      isHomemade: true,
+      email: EMAIL,
+      localDay: DAY,
+    })
+    expect(hit.cached).toBe(true)
+    expect(hit.description).toBe(shouted)
   })
 })
 

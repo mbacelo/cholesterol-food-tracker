@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   addDaysLocal,
-  clampToToday,
   formatDayLabel,
   isFutureLocal,
   parseLocalDate,
-  periodStartLocal,
   todayLocal,
   tzOffsetMinutes,
 } from './localDate'
@@ -84,23 +82,6 @@ describe('addDaysLocal', () => {
     expect(addDaysLocal('2026-03-07', 1)).toBe('2026-03-08')
     expect(addDaysLocal('2026-03-08', 1)).toBe('2026-03-09')
     expect(addDaysLocal('2026-10-31', 1)).toBe('2026-11-01')
-  })
-})
-
-describe('periodStartLocal', () => {
-  it('is inclusive, so a 7-day period spans exactly 7 dates', () => {
-    const now = new Date(2026, 7, 19)
-    expect(periodStartLocal(7, now)).toBe('2026-08-13')
-    expect(periodStartLocal(30, now)).toBe('2026-07-21')
-    expect(periodStartLocal(90, now)).toBe('2026-05-22')
-  })
-})
-
-describe('clampToToday', () => {
-  it('pulls a future date back to today and leaves the past alone', () => {
-    const now = new Date(2026, 7, 19)
-    expect(clampToToday('2026-09-01', now)).toBe('2026-08-19')
-    expect(clampToToday('2026-08-01', now)).toBe('2026-08-01')
   })
 })
 

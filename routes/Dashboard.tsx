@@ -27,6 +27,8 @@ const PERIODS = [7, 30, 90] as const
 /** Below these, a chart says so rather than drawing an empty axis. */
 const MIN_TREND_DAYS = 3
 const MIN_DISTRIBUTION_ENTRIES = 5
+/** At or below this, a dish is a real driver rather than a merely imperfect choice. */
+const HARMFUL_SCORE = -3
 
 /** Answers one question first: am I meeting my goal? (functional spec §6.7) */
 export default function Dashboard() {
@@ -51,6 +53,19 @@ export default function Dashboard() {
 
   const loggedDays = summary?.trend.filter((point) => point.average !== null).length ?? 0
   const totalEntries = summary?.distribution.reduce((sum, bucket) => sum + bucket.count, 0) ?? 0
+  /**
+   * Dishes at -3 or worse, which the daily average is structurally bad at showing.
+   *
+   * The goal is a MEAN, so a +5 salad cancels a -5 asado -- but saturated fat does
+   * not average out, and logging an extra good dish lifts the mean without
+   * changing anything that was actually eaten badly. This counts the dishes that
+   * drive LDL, straight out of the distribution the chart below already uses: no
+   * extra request, no new figure to keep consistent.
+   */
+  const worstCount =
+    summary?.distribution
+      .filter((bucket) => bucket.score <= HARMFUL_SCORE)
+      .reduce((sum, bucket) => sum + bucket.count, 0) ?? 0
 
   return (
     <>
@@ -124,6 +139,13 @@ export default function Dashboard() {
               </strong>{' '}
               días completos alcanzaron tu objetivo.
             </p>
+            {worstCount > 0 ? (
+              <p className="mt-1 text-sm text-slate-700">
+                <strong className="font-semibold">{worstCount}</strong>{' '}
+                {worstCount === 1 ? 'plato' : 'platos'} de −3 o peor{' '}
+                {worstCount === 1 ? 'entró' : 'entraron'} en este período.
+              </p>
+            ) : null}
             {summary.period.incompleteDays > 0 ? (
               <p className="mt-1 text-xs text-slate-500">
                 {summary.period.incompleteDays}{' '}
@@ -229,8 +251,9 @@ export default function Dashboard() {
 }
 
 /**
- * Wraps a chart with an accessible summary and a hidden data table, so the
- * dashboard is not sight-only.
+ * Wraps a chart with a screen-reader summary, so the headline figures are not
+ * sight-only. Recharts renders an SVG with no accessible structure of its own,
+ * so the `sr-only` sentence carries the period average and the target.
  */
 function ChartCard({
   title,

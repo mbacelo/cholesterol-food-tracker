@@ -51,7 +51,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
       throw new ApiError(409, 'conflict', 'entry count changed; reload and confirm again', true)
     }
 
-    await deleteUserById(user.id)
+    await deleteUserById(user.id, user.email)
 
     res.status(200).json({ deleted_entries: actual })
   } catch (err) {

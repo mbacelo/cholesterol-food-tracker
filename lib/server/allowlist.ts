@@ -117,7 +117,11 @@ export async function addEmail(email: string): Promise<AllowlistRow> {
   `
   invalidateAllowlistCache(key)
   const row = rows[0]
-  if (!row) throw new ApiError(409, 'conflict')
+  // `do nothing` returns no row when the address is already on the list. That is
+  // the ordinary "did I already add them?" mistake, so it gets its own code --
+  // a bare 409 renders as "that changed while you were looking at it", which
+  // describes a lost update and tells the administrator nothing useful.
+  if (!row) throw new ApiError(409, 'already_invited')
   return { ...row, has_signed_in: false }
 }
 

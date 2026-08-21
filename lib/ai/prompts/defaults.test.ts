@@ -2,7 +2,14 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_PROMPTS, PROMPT_KEYS, SCORING_PROMPT } from './defaults'
+import {
+  DEFAULT_PROMPTS,
+  NEGATIVE_MODIFIERS,
+  POSITIVE_MODIFIERS,
+  PROMPT_KEYS,
+  SCORING_PROMPT,
+  renderModifiers,
+} from './defaults'
 import { ANALYSIS_JSON_SCHEMA, zAnalysis } from '../schemas'
 
 const ROOT = fileURLToPath(new URL('../../..', import.meta.url))
@@ -108,6 +115,48 @@ describe('the scoring prompt encodes the whole rubric', () => {
     // Assert across the line wrap rather than on an exact substring.
     expect(SCORING_PROMPT).toMatch(/not describe a dish at all/)
     expect(SCORING_PROMPT).toMatch(/recognisable dish/)
+  })
+})
+
+describe('the rubric is one table, rendered two ways', () => {
+  // routes/Rubric.tsx renders these same constants. Before, it kept its own
+  // Spanish copy, so tuning the prompt silently made the page that explains
+  // "the score is not negotiable" untrue.
+
+  it('interpolates every negative modifier into STEP 2', () => {
+    const block = renderModifiers(NEGATIVE_MODIFIERS)
+    expect(SCORING_PROMPT).toContain(block)
+    // The exact column layout the prompt has always used.
+    expect(block.startsWith('  N1  -3  ')).toBe(true)
+  })
+
+  it('interpolates every positive modifier into STEP 3', () => {
+    const block = renderModifiers(POSITIVE_MODIFIERS)
+    expect(SCORING_PROMPT).toContain(block)
+    // P10 is the one code wide enough to shift the column.
+    expect(block).toContain('\n  P10 +1  ')
+  })
+
+  it('keeps the counts functional spec §4.2 fixes', () => {
+    expect(NEGATIVE_MODIFIERS).toHaveLength(9)
+    expect(POSITIVE_MODIFIERS).toHaveLength(10)
+  })
+
+  it('gives every rule a code, a non-zero modifier and both wordings', () => {
+    for (const rule of [...NEGATIVE_MODIFIERS, ...POSITIVE_MODIFIERS]) {
+      expect(rule.code).toMatch(/^[NP]\d+$/)
+      expect(Number.isInteger(rule.modifier)).toBe(true)
+      expect(rule.modifier).not.toBe(0)
+      expect(rule.prompt.trim().length).toBeGreaterThan(0)
+      // The UI half is Spanish and must never be left as the English text.
+      expect(rule.ui.trim().length).toBeGreaterThan(0)
+      expect(rule.ui).not.toBe(rule.prompt)
+    }
+  })
+
+  it('signs each table consistently', () => {
+    for (const rule of NEGATIVE_MODIFIERS) expect(rule.modifier).toBeLessThan(0)
+    for (const rule of POSITIVE_MODIFIERS) expect(rule.modifier).toBeGreaterThan(0)
   })
 })
 

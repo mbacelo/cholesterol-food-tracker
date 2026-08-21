@@ -64,8 +64,11 @@ function NavItems({ vertical = false }: { vertical?: boolean }) {
  * eliminated from the production bundle.
  */
 function DebugBanner() {
-  if (!import.meta.env.DEV) return null
+  // Every hook runs before any early return. `import.meta.env.DEV` is a build
+  // constant, so the old order happened to be stable -- but a conditional hook is
+  // a landmine for whoever edits this next.
   const { state } = useSession()
+  if (!import.meta.env.DEV) return null
   if (state.status !== 'ready' || !state.debug) return null
   return (
     <div

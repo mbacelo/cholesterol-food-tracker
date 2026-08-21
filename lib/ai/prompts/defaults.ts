@@ -10,7 +10,224 @@
  * There is deliberately no code fallback to these at request time. A missing
  * prompts row is a configuration error, because a silent fallback would make
  * "prompts are editable content" a lie.
+ *
+ * STEP 2 and STEP 3 of the scoring prompt are INTERPOLATED from the modifier
+ * table below rather than written out inline. That same table is what
+ * routes/Rubric.tsx renders, so the rubric the user is shown cannot disagree
+ * with the rubric the model is given about which rules exist or what each one is
+ * worth. A test asserts the interpolation reproduces the block byte for byte.
+ *
+ * The table lives in THIS file rather than its own module on purpose:
+ * scripts/generate-seed.mjs imports this file directly under plain node, whose
+ * type stripping will not resolve a `./rubric.js` specifier onto a `.ts` file.
+ * One more relative import here would break the generated migration.
  */
+
+/**
+ * THE RUBRIC, as data.
+ *
+ * The modifier tables used to exist twice: once as prose inside SCORING_PROMPT,
+ * and once as Spanish string literals in routes/Rubric.tsx, the screen that
+ * explains to the user why a score cannot be edited. Nothing kept the two in
+ * agreement, so tuning the prompt silently made that explanation false -- and
+ * that page is the whole argument for design principle 3.
+ *
+ * One table, two renderings:
+ *
+ *   - `prompt` is the English text the model reads, laid out as STEP 2 and
+ *     STEP 3 of the scoring prompt. `renderModifiers()` reproduces those blocks
+ *     byte for byte.
+ *   - `ui` is how the rubric screen names the same rule to a Spanish reader.
+ *
+ * The wordings differ because the audiences do. What can no longer differ is the
+ * part that matters: WHICH rules exist, and WHAT each one is worth.
+ *
+ * This does not cover a prompt an administrator has since edited -- the live text
+ * comes from the database. It covers the default, which is what is live unless
+ * someone has deliberately changed it, and the Rubric screen says so.
+ */
+export interface Modifier {
+  /** The rubric's own label for this rule: N1..N9, P1..P10. */
+  code: string
+  /** Points added to the running total. Negative raises LDL, positive lowers it. */
+  modifier: number
+  /** The line(s) the scoring prompt shows the model, already wrapped. */
+  prompt: string
+  /** How the rubric screen names this rule to the user, in Spanish. */
+  ui: string
+}
+
+/** Raise LDL. Functional spec 4.2, negative modifiers. */
+export const NEGATIVE_MODIFIERS: Modifier[] = [
+  {
+    code: 'N1',
+    modifier: -3,
+    prompt: `Partially hydrogenated oil or industrial trans fat.
+Commercial baked goods and pastries, some margarines, packaged fried
+snacks, non-dairy creamer, commercial frosting, mass-produced cookies,
+crackers and doughnuts, deep-fried food from an establishment that
+reuses its frying fat.`,
+    ui: 'Aceite parcialmente hidrogenado o grasa trans industrial',
+  },
+  {
+    code: 'N2',
+    modifier: -3,
+    prompt: `A major saturated fat source is the BASE of the dish: fatty red meat,
+butter, cream, full-fat cheese, coconut milk or coconut oil, palm oil
+or dendê, lard, chicharrón, condensed or evaporated milk, dulce de
+leche. "Base" means the dish is built on it, or it is the most
+prominent ingredient.`,
+    ui: 'Una fuente importante de grasa saturada es la base del plato',
+  },
+  {
+    code: 'N3',
+    modifier: -2,
+    prompt: `A saturated fat source is PRESENT BUT SECONDARY: cheese topping,
+cream or béchamel sauce, cooking butter, a splash of cream,
+mayonnaise, queso fresco, a slice of cheese in a sandwich.
+Do not apply N3 for the same ingredient you already scored with N2.`,
+    ui: 'Hay una fuente de grasa saturada, pero es secundaria',
+  },
+  {
+    code: 'N4',
+    modifier: -2,
+    prompt: `Processed meat: sausage, chorizo, morcilla, longaniza, bacon, panceta,
+salami, ham, mortadella, hot dog, pâté, salchichón, cured pork.`,
+    ui: 'Carne procesada',
+  },
+  {
+    code: 'N5',
+    modifier: -2,
+    prompt: `Deep fried, or fried in abundant fat: milanesa, papas fritas,
+empanada frita, churros, tempura, tostones, tortilla de papas,
+anything battered or breaded and fried.
+Do not apply N5 for a dish you already scored with N2 because it is
+built on its own frying fat, such as chicharrón.`,
+    ui: 'Frito por inmersión, o frito en abundante grasa',
+  },
+  {
+    code: 'N6',
+    modifier: -1,
+    prompt: `Refined grains are the dominant carbohydrate: white bread, white rice,
+standard pasta, pastry, white flour tortilla, white bun, refined corn
+masa, arepa de harina, crackers.`,
+    ui: 'Los cereales refinados son el carbohidrato dominante',
+  },
+  {
+    code: 'N7',
+    modifier: -1,
+    prompt: `Added sugar: a sweet dish, a dessert, a sweetened drink, jam, dulce de
+leche, syrup, sweetened yoghurt, a sugary soft drink, juice with sugar.`,
+    ui: 'Azúcar añadido',
+  },
+  {
+    code: 'N8',
+    modifier: -1,
+    prompt: `PROXY: ultra-processed convenience product — supermarket ready meal,
+packaged snack, instant noodles, fast food, frozen breaded product,
+powdered sauce or soup.`,
+    ui: 'Producto ultraprocesado de conveniencia',
+  },
+  {
+    code: 'N9',
+    modifier: -1,
+    prompt: `PROXY: bought or restaurant food whose cooking fat cannot be
+identified from the description.`,
+    ui: 'Comida comprada cuya grasa de cocción no se puede identificar',
+  },
+]
+
+/** Lower LDL. Functional spec 4.2, positive modifiers. */
+export const POSITIVE_MODIFIERS: Modifier[] = [
+  {
+    code: 'P1',
+    modifier: 2,
+    prompt: `Strong soluble fiber source: oats, barley, lentils, chickpeas, beans
+(black, pinto, cranberry, white), peas, psyllium, farro.`,
+    ui: 'Fuente fuerte de fibra soluble (avena, legumbres, psyllium)',
+  },
+  {
+    code: 'P2',
+    modifier: 2,
+    prompt: `The PRIMARY fat of the dish is unsaturated: olive oil, avocado, nuts,
+seeds, sunflower or canola oil, tahini.
+Do not apply P2 if N2 applies — a dish has only one primary fat.`,
+    ui: 'La grasa principal es insaturada (aceite de oliva, aguacate, frutos secos)',
+  },
+  {
+    code: 'P3',
+    modifier: 1,
+    prompt: `Fatty fish rich in omega-3: salmon, sardines, mackerel, anchovies,
+trout, herring, jurel, caballa. Only +1: omega-3 lowers triglycerides
+far more than it lowers LDL, and this scale is LDL only.`,
+    ui: 'Pescado graso rico en omega-3',
+  },
+  {
+    code: 'P4',
+    modifier: 1,
+    prompt: `Moderate soluble fiber source: apple, pear, citrus, orange, carrot,
+Brussels sprouts, flaxseed, chia, aubergine, okra, plum, fig, guava.`,
+    ui: 'Fuente moderada de fibra soluble (manzana, zanahoria, lino)',
+  },
+  {
+    code: 'P5',
+    modifier: 1,
+    prompt: `Soy protein is a main component: tofu, tempeh, edamame, soy milk,
+textured soy.`,
+    ui: 'La proteína de soja es un componente principal',
+  },
+  {
+    code: 'P6',
+    modifier: 1,
+    prompt: `Nuts or seeds are a real component, not a garnish: peanuts, walnuts,
+almonds, cashews, sunflower or pumpkin seeds, peanut butter.`,
+    ui: 'Frutos secos o semillas son un componente real, no una guarnición',
+  },
+  {
+    code: 'P7',
+    modifier: 1,
+    prompt: `Whole grains are the dominant carbohydrate: whole wheat, brown rice,
+quinoa, oats, whole rye, whole maize, amaranth, buckwheat.`,
+    ui: 'Los cereales integrales son el carbohidrato dominante',
+  },
+  {
+    code: 'P8',
+    modifier: 1,
+    prompt: `Vegetables or fruit are a substantial part of the dish, not a garnish
+or a sprig.`,
+    ui: 'Las verduras o frutas son una parte sustancial del plato',
+  },
+  {
+    code: 'P9',
+    modifier: 1,
+    prompt: `Plant sterol or stanol fortified product.`,
+    ui: 'Producto fortificado con esteroles o estanoles vegetales',
+  },
+  {
+    code: 'P10',
+    modifier: 1,
+    prompt: `The main protein is lean: skinless poultry, white fish, shellfish
+(prawns, mussels, squid, clams, octopus), egg white, legumes, low-fat
+cottage cheese.`,
+    ui: 'La proteína principal es magra',
+  },
+]
+
+/**
+ * Renders a modifier table back into the exact layout STEP 2 and STEP 3 use:
+ * two spaces, the code in a three-wide column, the signed modifier, two spaces,
+ * then the text -- with continuation lines indented to the text column.
+ */
+export function renderModifiers(rules: readonly Modifier[]): string {
+  return rules
+    .map((rule) => {
+      const sign = rule.modifier < 0 ? '-' : '+'
+      const head = `  ${rule.code.padEnd(3)} ${sign}${Math.abs(rule.modifier)}  `
+      const [first, ...rest] = rule.prompt.split('\n')
+      return [head + first, ...rest.map((line) => ' '.repeat(10) + line)].join('\n')
+    })
+    .join('\n')
+}
 
 export const IMAGE_ANALYSIS_PROMPT = `# IMAGE ANALYSIS
 
@@ -188,62 +405,11 @@ Set running_total = 0.
 Work down this list in order. Apply each line at most once. A line applies if any
 of its examples, or anything of the same kind, is part of the dish.
 
-  N1  -3  Partially hydrogenated oil or industrial trans fat.
-          Commercial baked goods and pastries, some margarines, packaged fried
-          snacks, non-dairy creamer, commercial frosting, mass-produced cookies,
-          crackers and doughnuts, deep-fried food from an establishment that
-          reuses its frying fat.
-  N2  -3  A major saturated fat source is the BASE of the dish: fatty red meat,
-          butter, cream, full-fat cheese, coconut milk or coconut oil, palm oil
-          or dendê, lard, chicharrón, condensed or evaporated milk, dulce de
-          leche. "Base" means the dish is built on it, or it is the most
-          prominent ingredient.
-  N3  -2  A saturated fat source is PRESENT BUT SECONDARY: cheese topping,
-          cream or béchamel sauce, cooking butter, a splash of cream,
-          mayonnaise, queso fresco, a slice of cheese in a sandwich.
-          Do not apply N3 for the same ingredient you already scored with N2.
-  N4  -2  Processed meat: sausage, chorizo, morcilla, longaniza, bacon, panceta,
-          salami, ham, mortadella, hot dog, pâté, salchichón, cured pork.
-  N5  -2  Deep fried, or fried in abundant fat: milanesa, papas fritas,
-          empanada frita, churros, tempura, tostones, tortilla de papas,
-          anything battered or breaded and fried.
-          Do not apply N5 for a dish you already scored with N2 because it is
-          built on its own frying fat, such as chicharrón.
-  N6  -1  Refined grains are the dominant carbohydrate: white bread, white rice,
-          standard pasta, pastry, white flour tortilla, white bun, refined corn
-          masa, arepa de harina, crackers.
-  N7  -1  Added sugar: a sweet dish, a dessert, a sweetened drink, jam, dulce de
-          leche, syrup, sweetened yoghurt, a sugary soft drink, juice with sugar.
-  N8  -1  PROXY: ultra-processed convenience product — supermarket ready meal,
-          packaged snack, instant noodles, fast food, frozen breaded product,
-          powdered sauce or soup.
-  N9  -1  PROXY: bought or restaurant food whose cooking fat cannot be
-          identified from the description.
+${renderModifiers(NEGATIVE_MODIFIERS)}
 
 ## STEP 3 — Apply every positive modifier that applies
 
-  P1  +2  Strong soluble fiber source: oats, barley, lentils, chickpeas, beans
-          (black, pinto, cranberry, white), peas, psyllium, farro.
-  P2  +2  The PRIMARY fat of the dish is unsaturated: olive oil, avocado, nuts,
-          seeds, sunflower or canola oil, tahini.
-          Do not apply P2 if N2 applies — a dish has only one primary fat.
-  P3  +1  Fatty fish rich in omega-3: salmon, sardines, mackerel, anchovies,
-          trout, herring, jurel, caballa. Only +1: omega-3 lowers triglycerides
-          far more than it lowers LDL, and this scale is LDL only.
-  P4  +1  Moderate soluble fiber source: apple, pear, citrus, orange, carrot,
-          Brussels sprouts, flaxseed, chia, aubergine, okra, plum, fig, guava.
-  P5  +1  Soy protein is a main component: tofu, tempeh, edamame, soy milk,
-          textured soy.
-  P6  +1  Nuts or seeds are a real component, not a garnish: peanuts, walnuts,
-          almonds, cashews, sunflower or pumpkin seeds, peanut butter.
-  P7  +1  Whole grains are the dominant carbohydrate: whole wheat, brown rice,
-          quinoa, oats, whole rye, whole maize, amaranth, buckwheat.
-  P8  +1  Vegetables or fruit are a substantial part of the dish, not a garnish
-          or a sprig.
-  P9  +1  Plant sterol or stanol fortified product.
-  P10 +1  The main protein is lean: skinless poultry, white fish, shellfish
-          (prawns, mussels, squid, clams, octopus), egg white, legumes, low-fat
-          cottage cheese.
+${renderModifiers(POSITIVE_MODIFIERS)}
 
 ## STEP 4 — Accumulate step by step
 

@@ -27,7 +27,8 @@ export interface StoredImage {
 }
 
 export interface StoredDraft {
-  source: 'camera' | 'gallery' | 'typed'
+  /** Only these two are ever written: a gallery pick is a camera capture as far as this flow is concerned. */
+  source: 'camera' | 'typed'
   description: string
   isHomemade: boolean
   entryDate: string
@@ -79,11 +80,16 @@ export function saveDraft(draft: StoredDraft): boolean {
 export function loadCapture(): { image: StoredImage | null; draft: StoredDraft | null } {
   const image = read<StoredImage>(KEY_IMAGE)
   const draft = read<StoredDraft>(KEY_DRAFT)
-  // If either side is stale, drop both: a draft referring to an image that is no
-  // longer there is worse than starting over.
-  if ((image === null) !== (draft === null) && draft?.source === 'typed') {
-    return { image: null, draft }
-  }
+
+  // A typed draft never had an image, so it restores on its own.
+  if (draft === null || draft.source === 'typed') return { image, draft }
+
+  // A camera draft without its image does not: the review screen would show a
+  // score for a photo that is no longer on screen, which is exactly the state the
+  // flow is built to avoid. Drop both and start over rather than restore half of
+  // it.
+  if (image === null) return { image: null, draft: null }
+
   return { image, draft }
 }
 
@@ -96,13 +102,15 @@ export function clearCapture(): void {
   }
 }
 
-/** Whether a draft exists, for the nav dot. Cheap enough to call on render. */
+/**
+ * Whether a draft exists, for the nav dot. Cheap enough to call on render.
+ *
+ * Goes through the same `read` as `loadCapture`, so the version check and the
+ * 12-hour expiry apply. Reading the key directly would let the dot advertise a
+ * draft that `loadCapture` is about to discard.
+ */
 export function hasDraft(): boolean {
-  try {
-    return localStorage.getItem(KEY_DRAFT) !== null
-  } catch {
-    return false
-  }
+  return read<StoredDraft>(KEY_DRAFT) !== null
 }
 
 /**

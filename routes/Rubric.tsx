@@ -1,14 +1,20 @@
 import { Link } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
 import { ScoreBadge } from '@/components/score'
+import { NEGATIVE_MODIFIERS, POSITIVE_MODIFIERS, type Modifier } from '@/lib/ai/prompts/defaults'
 
 /**
  * The rubric as a reference page (functional spec §6.8), so the user understands
  * how scores are produced and why they cannot be edited.
  *
- * Static copy of the v1 rubric rather than a render of the live scoring_prompt: a
- * raw prompt is not user-facing content, and an administrator may have tuned it.
- * The note at the bottom says so rather than pretending otherwise.
+ * The modifier tables are rendered from the SAME constant the scoring prompt is
+ * built from, not a hand-kept copy. They used to be two independent lists, which
+ * meant tuning the prompt silently made this page false -- and this page is the
+ * whole argument for "the score is not negotiable".
+ *
+ * It still shows the DEFAULT rubric rather than the live scoring_prompt: a raw
+ * prompt is not user-facing content, and an administrator may have tuned it. The
+ * note at the bottom says so rather than pretending otherwise.
  */
 
 const SCALE = [
@@ -17,31 +23,6 @@ const SCALE = [
   { range: '0', meaning: 'Sin efecto relevante en ningún sentido.', score: 0 },
   { range: '-1 a -3', meaning: 'Sube el LDL. Aceptable de vez en cuando, no a diario.', score: -2 },
   { range: '-4 a -5', meaning: 'Sube mucho el LDL. Basado en grasa saturada o trans.', score: -5 },
-]
-
-const NEGATIVE = [
-  ['Aceite parcialmente hidrogenado o grasa trans industrial', '-3'],
-  ['Una fuente importante de grasa saturada es la base del plato', '-3'],
-  ['Hay una fuente de grasa saturada, pero es secundaria', '-2'],
-  ['Carne procesada', '-2'],
-  ['Frito por inmersión, o frito en abundante grasa', '-2'],
-  ['Los cereales refinados son el carbohidrato dominante', '-1'],
-  ['Azúcar añadido', '-1'],
-  ['Producto ultraprocesado de conveniencia', '-1'],
-  ['Comida comprada cuya grasa de cocción no se puede identificar', '-1'],
-]
-
-const POSITIVE = [
-  ['Fuente fuerte de fibra soluble (avena, legumbres, psyllium)', '+2'],
-  ['La grasa principal es insaturada (aceite de oliva, aguacate, frutos secos)', '+2'],
-  ['Pescado graso rico en omega-3', '+1'],
-  ['Fuente moderada de fibra soluble (manzana, zanahoria, lino)', '+1'],
-  ['La proteína de soja es un componente principal', '+1'],
-  ['Frutos secos o semillas son un componente real, no una guarnición', '+1'],
-  ['Los cereales integrales son el carbohidrato dominante', '+1'],
-  ['Las verduras o frutas son una parte sustancial del plato', '+1'],
-  ['Producto fortificado con esteroles o estanoles vegetales', '+1'],
-  ['La proteína principal es magra', '+1'],
 ]
 
 export default function Rubric() {
@@ -75,8 +56,8 @@ export default function Rubric() {
         </ul>
       </section>
 
-      <ModifierTable title="Qué baja el puntaje" rows={NEGATIVE} kind="negative" />
-      <ModifierTable title="Qué sube el puntaje" rows={POSITIVE} kind="positive" />
+      <ModifierTable title="Qué baja el puntaje" rows={NEGATIVE_MODIFIERS} kind="negative" />
+      <ModifierTable title="Qué sube el puntaje" rows={POSITIVE_MODIFIERS} kind="positive" />
 
       <section aria-label="Reglas" className="mt-5 rounded-card bg-white p-4">
         <h2 className="text-sm font-semibold text-slate-900">Reglas aplicadas al resultado</h2>
@@ -120,24 +101,28 @@ function ModifierTable({
   kind,
 }: {
   title: string
-  rows: string[][]
+  rows: readonly Modifier[]
   kind: 'positive' | 'negative'
 }) {
   return (
     <section aria-label={title} className="mt-5">
       <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
       <ul className="mt-2 space-y-1.5">
-        {rows.map(([label, modifier]) => (
+        {rows.map((rule) => (
           <li
-            key={label}
+            key={rule.code}
             className={`flex items-baseline gap-3 rounded-lg px-3 py-2 text-sm ${
               kind === 'positive'
                 ? 'bg-score-p2-soft text-score-p2-ink'
                 : 'bg-score-m3-soft text-score-m3-ink'
             }`}
           >
-            <span className="w-8 shrink-0 font-mono font-semibold">{modifier}</span>
-            <span>{label}</span>
+            {/* The signed number the rubric actually adds, straight from the
+                table the prompt is built from. */}
+            <span className="w-8 shrink-0 font-mono font-semibold">
+              {rule.modifier > 0 ? `+${rule.modifier}` : rule.modifier}
+            </span>
+            <span>{rule.ui}</span>
           </li>
         ))}
       </ul>

@@ -101,7 +101,11 @@ lib/ai/
   providers/anthropic.ts
   providers/openai.ts
   providers/mock.ts     deterministic, offline; for tests and for building without a key
-  prompts/defaults.ts   the seeded prompt bodies; 002_seed_prompts.sql is GENERATED from this
+  prompts/defaults.ts   the seeded prompt bodies, and the rubric modifier table
+                        they and routes/Rubric.tsx are both built from;
+                        002_seed_prompts.sql is GENERATED from this
+  fixtures.test.ts      ~31 fixed descriptions scored by the REAL model, opt-in
+                        behind RUN_AI_FIXTURES; the net for a prompt edit
   analyze.ts            one call: image and/or description + homemade flag → full result
   schemas.ts            Zod schema AND a hand-written provider json_schema, kept in sync by a test
 domain/
@@ -241,7 +245,7 @@ Enforced in application code, structured so the failure mode cannot be reached b
    ```
    A `where id = ...` without `user_id` is the entire bug class this file exists to prevent. Zero rows returned is a 404, never a silent success.
 3. **`userId` comes only from the verified session** — never from a body, query parameter or header. Handlers get it from `requireUser(req)` and pass it down. A `user_id` in a request body is ignored, and a test asserts that.
-4. **Administrators cannot reach food data.** Admin endpoints touch `food_entries` only via `count(*)` and `delete`. No admin response can carry a description, score or rationale. User deletion is `delete from users where id = ...` and the cascade — one statement, with nothing outside Postgres to clean up.
+4. **Administrators cannot reach food data.** Admin endpoints touch `food_entries` only via `count(*)` and `delete`. No admin response can carry a description, score or rationale. User deletion is `delete from users where id = ...` and the cascade, preceded by an explicit `delete from ai_usage where email = ...`: that table is keyed by email rather than `user_id`, so it has no foreign key to hang a cascade on and would otherwise outlive the person. Usage rows go first, because the HTTP driver has no interactive transaction and a stranded budget counter is harmless where a stranded email address is not.
 5. Because there is exactly one accessor file, the audit is a single command: `grep -rn "food_entries" api/` must return nothing.
 
 ---
@@ -251,6 +255,8 @@ Enforced in application code, structured so the failure mode cannot be reached b
 Two steps:
 
 1. **Google Identity Services** in `index.html` produces an ID token in the browser. That is the client's only Google interaction; any client-side JWT decode is for display only.
+
+   The tag is `async`, so it routinely resolves **after** React has mounted. `routes/Login.tsx` therefore waits on the script — its `load` event, plus a short poll and a timeout — rather than sampling `window.google` once. Sampling once loses a real race on a cold cache or a slow connection, and the failure is silent: no button, no error, and the only way into the app simply absent. On timeout the screen offers a reload instead of blank space.
 2. **`POST /api/session`** verifies the token server-side with `google-auth-library`, checks the allowlist, provisions the `users` row on first login, then signs a small JWT with `jose` and returns it as `httpOnly; Secure; SameSite=Lax; Max-Age=7d`. Every later request authenticates from that cookie: no Google round-trip, no token in JavaScript, and the session survives the app being backgrounded on a phone.
 
 Token verification must **fail closed on a missing `GOOGLE_CLIENT_ID`**: the Google library skips audience checking entirely when no audience is supplied, which would accept tokens minted for any Google OAuth client. A configuration gap must never widen who can sign in.
@@ -341,7 +347,9 @@ The functional spec requires that the same description scored twice differ by no
 2. **A rubric prompt that accumulates modifiers step by step**, for inputs never seen before.
 
    **No temperature is sent, on either provider, and the `AIProvider` interface does not expose one.** Current Anthropic models have removed `temperature`/`top_p`/`top_k` and reject them with a 400. On OpenAI a fixed temperature is legal only at reasoning effort `none`, and reasoning is worth more to scoring quality than a fixed temperature is to stability, so that path reasons at `AI_EFFORT` instead. Each provider decides internally; determinism rests on mechanisms 1 and 3.
-3. **A Vitest suite of ~30 fixed descriptions** asserting each lands in an expected band, plus unit tests for the post-rules in `domain/scoring.ts`. The fixture half calls the real model, so it is opt-in behind `RUN_AI_FIXTURES`. Run it after every prompt edit; it is the regression net for the riskiest acceptance criterion in the spec.
+3. **`lib/ai/fixtures.test.ts`, ~31 fixed descriptions** asserting each lands in an expected band, plus unit tests for the post-rules in `domain/scoring.ts`. It calls the real model, so it is opt-in behind `RUN_AI_FIXTURES` and skipped by default — `npm test` stays free, offline and credential-less. Run it after every prompt edit; it is the regression net for the riskiest acceptance criterion in the spec.
+
+   Bands, not exact integers: §6.3 allows a one-point drift, so an exact assertion would fail on noise instead of on regressions. The bands are wide enough to absorb that and narrow enough that a broken rubric cannot pass. The suite refuses to run against the `mock` provider, which would otherwise pass even on a rubric that had been deleted.
 
 ### Cost control
 
@@ -358,6 +366,7 @@ The budget is checked read-only in the handler and **consumed inside `analyze()`
 - **Score colors:** one `scoreColor(score)` helper used everywhere a score appears, mapping -5 deep red through 0 grey to +5 deep green, always rendered with the signed number. Tailwind purges interpolated class names, so write the full class strings out in that one module and add them to the `@source inline(...)` safelist in `index.css`.
 - **Charts:** Recharts. A line chart of daily averages with a `ReferenceLine` at the target, and a bar chart of the -5..+5 distribution with per-bar `Cell` colors. Below a minimum data threshold both render a "keep logging to see trends" state rather than an empty axis.
 - **Camera:** `<input type="file" accept="image/*" capture="environment">` opens the camera directly. No native shell needed.
+- **The rubric is one table, rendered twice.** `NEGATIVE_MODIFIERS`/`POSITIVE_MODIFIERS` in `lib/ai/prompts/defaults.ts` carry each rule's code, its modifier, the English text the model reads and the Spanish label the user reads. `renderModifiers()` composes STEP 2 and STEP 3 of the scoring prompt from it, and `routes/Rubric.tsx` renders the same rows. The two wordings differ because the audiences do; which rules exist and what each is worth cannot. A test asserts the composed blocks appear in the prompt verbatim. This binds the **default** rubric only — a tuned `scoring_prompt` lives in the database, and the page says so.
 - **Dates:** every date the client sends comes from `utils/localDate.ts`, along with `tz_offset_minutes`. Nothing formats or compares dates ad hoc.
 - **History:** keyset pagination on `(entry_date, created_at)` with infinite scroll. Search is `description ilike '%q%'`; at this data volume a full-text index is unnecessary.
 - **Dashboard:** aggregate in SQL (`avg(score) group by entry_date` over the period), not in the client.

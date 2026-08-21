@@ -24,14 +24,14 @@ export type ErrorCode =
   | 'method_not_allowed'
   | 'payload_too_large'
   | 'conflict'
+  /** That email is already on the allowlist. A mistake, not a lost update. */
+  | 'already_invited'
   /** In-memory burst limiter tripped. */
   | 'rate_limited'
   /** Durable per-user daily AI budget exhausted. */
   | 'quota_exceeded'
   /** Revert requested with no previous prompt version stored. */
   | 'nothing_to_revert'
-  /** The model could not find food in the image; drives the §6.1 fallback. */
-  | 'no_food_detected'
   /** The model failed or returned invalid output after the one retry. */
   | 'ai_unavailable'
   /** A required environment variable is missing. Fails loud, never open. */

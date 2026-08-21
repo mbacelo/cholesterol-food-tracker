@@ -98,6 +98,13 @@ export default function EntryDetail() {
         method: 'POST',
         body: { description: description.trim(), is_homemade: isHomemade },
       })
+      // The Log flow blocks Save on this; so must an edit, or the same text that
+      // cannot be logged in the first place can be committed onto an existing
+      // entry through the back door.
+      if (!analysis.food_detected) {
+        setError('Eso no describe un plato reconocible. Corrige la descripción.')
+        return
+      }
       setPreview(analysis)
     } catch (err) {
       setError(errorMessage(err))

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { ArrowLeft, Ban, CheckCircle2, MoreVertical, Trash2, UserPlus } from 'lucide-react'
 import { ConfirmDialog, ErrorState, SkeletonList } from '@/components/ui'
@@ -58,6 +58,8 @@ export function AdminUsers() {
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [deleting, setDeleting] = useState<{ email: string; count: number } | null>(null)
+  /** Removal revokes access immediately, so it is confirmed like the other destructive actions. */
+  const [removing, setRemoving] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setError(null)
@@ -168,13 +170,7 @@ export function AdminUsers() {
               <button
                 type="button"
                 disabled={busy}
-                onClick={() =>
-                  void act(() =>
-                    apiFetch(`/api/admin/allowlist?email=${encodeURIComponent(row.email)}`, {
-                      method: 'DELETE',
-                    }),
-                  )
-                }
+                onClick={() => setRemoving(row.email)}
                 className="tap rounded-lg border border-amber-300 px-3 text-xs font-semibold text-amber-800"
               >
                 Quitar de la lista
@@ -194,6 +190,30 @@ export function AdminUsers() {
           </li>
         ))}
       </ul>
+
+      <ConfirmDialog
+        open={removing !== null}
+        title="¿Quitar este correo de la lista?"
+        body={
+          removing
+            ? `${removing} perderá el acceso de inmediato. Sus registros no se eliminan.`
+            : ''
+        }
+        confirmLabel="Quitar"
+        destructive
+        pending={busy}
+        onConfirm={() => {
+          const target = removing
+          setRemoving(null)
+          if (!target) return
+          void act(() =>
+            apiFetch(`/api/admin/allowlist?email=${encodeURIComponent(target)}`, {
+              method: 'DELETE',
+            }),
+          )
+        }}
+        onCancel={() => setRemoving(null)}
+      />
 
       <ConfirmDialog
         open={deleting !== null}
@@ -255,44 +275,87 @@ function StatusChip({ row }: { row: AllowlistRow }) {
   )
 }
 
+type PromptKey = PromptRow['key']
+
 export function AdminPrompts() {
   const [prompts, setPrompts] = useState<PromptRow[] | null>(null)
-  const [active, setActive] = useState<PromptRow['key']>('scoring_prompt')
-  const [draft, setDraft] = useState('')
+  const [active, setActive] = useState<PromptKey>('scoring_prompt')
+  /**
+   * One draft PER PROMPT, not one shared draft.
+   *
+   * These are the two most dangerous strings in the app and they are edited in a
+   * plain textarea, so switching tabs must not be able to throw an edit away --
+   * which is exactly what a single `draft` plus a refetch keyed on the active tab
+   * used to do.
+   */
+  const [drafts, setDrafts] = useState<Partial<Record<PromptKey, string>>>({})
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirmRevert, setConfirmRevert] = useState(false)
 
+  /** The server bodies as of the last fetch, so `load` can tell an edit from a stale draft. */
+  const serverBodies = useRef<Partial<Record<PromptKey, string>>>({})
+
+  // Deliberately does NOT depend on `active`: changing tabs is local state, not a
+  // reason to refetch. A refetch adopts the server body only for tabs the user
+  // has not edited, so saving one prompt cannot discard an edit in progress on
+  // the other.
   const load = useCallback(async () => {
     setError(null)
     try {
       const result = await apiFetch<{ prompts: PromptRow[] }>('/api/admin/prompts')
       setPrompts(result.prompts)
-      const current = result.prompts.find((prompt) => prompt.key === active)
-      if (current) setDraft(current.body)
+      setDrafts((current) => {
+        const next = { ...current }
+        for (const prompt of result.prompts) {
+          const draft = current[prompt.key]
+          const known = serverBodies.current[prompt.key]
+          if (draft === undefined || known === undefined || draft === known) {
+            next[prompt.key] = prompt.body
+          }
+        }
+        return next
+      })
+      for (const prompt of result.prompts) serverBodies.current[prompt.key] = prompt.body
     } catch (err) {
       setError(errorMessage(err))
     }
-  }, [active])
+  }, [])
 
   useEffect(() => {
     void load()
   }, [load])
 
   const current = prompts?.find((prompt) => prompt.key === active)
+  const draft = drafts[active] ?? ''
+  const setDraft = useCallback(
+    (value: string) => setDrafts((currentDrafts) => ({ ...currentDrafts, [active]: value })),
+    [active],
+  )
+  // Any tab with unsaved work, not just the visible one -- the beforeunload guard
+  // below has to fire for an edit sitting on the other tab too.
+  const dirtyKeys = new Set(
+    (prompts ?? [])
+      .filter((prompt) => {
+        const value = drafts[prompt.key]
+        return value !== undefined && value !== prompt.body
+      })
+      .map((prompt) => prompt.key),
+  )
+  const anyDirty = dirtyKeys.size > 0
   const dirty = current !== undefined && draft !== current.body
 
   // Guard a reload or tab close while an edit is unsaved. Full in-app navigation
   // blocking would need a data router, which the declarative mode this app uses
   // does not provide, so the affordances we render are guarded instead.
   useEffect(() => {
-    if (!dirty) return
+    if (!anyDirty) return
     const warn = (event: BeforeUnloadEvent) => {
       event.preventDefault()
     }
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
-  }, [dirty])
+  }, [anyDirty])
 
   return (
     <>
@@ -306,16 +369,20 @@ export function AdminPrompts() {
             key={key}
             type="button"
             aria-pressed={active === key}
-            onClick={() => {
-              setActive(key)
-              const next = prompts?.find((prompt) => prompt.key === key)
-              setDraft(next?.body ?? '')
-            }}
+            onClick={() => setActive(key)}
             className={`tap flex-1 rounded-md text-xs font-semibold ${
               active === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
             }`}
           >
             {key === 'scoring_prompt' ? 'Puntaje' : 'Análisis de imagen'}
+            {/* An edit now survives a tab switch, so the other tab has to say it
+                is holding one -- otherwise unsaved work is merely invisible
+                instead of lost. */}
+            {dirtyKeys.has(key) ? (
+              <span className="ml-1 text-amber-600" title="Cambios sin guardar">
+                •<span className="sr-only"> cambios sin guardar</span>
+              </span>
+            ) : null}
           </button>
         ))}
       </div>

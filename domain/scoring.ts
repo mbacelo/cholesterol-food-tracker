@@ -23,9 +23,9 @@ export interface ScoreInputs {
   hasTransFat: boolean
   /** Built only on vegetables, fruit, legumes or whole grains, no added saturated fat. */
   wholePlantOnly: boolean
-  /** Proxy penalty N9: ultra-processed convenience product. */
+  /** Proxy penalty N8: ultra-processed convenience product. */
   proxyUltraProcessed: boolean
-  /** Proxy penalty N10: bought food whose cooking fat cannot be identified. */
+  /** Proxy penalty N9: bought food whose cooking fat cannot be identified. */
   proxyUnidentifiedFat: boolean
 }
 

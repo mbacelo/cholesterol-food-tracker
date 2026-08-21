@@ -47,20 +47,10 @@ export function isFutureLocal(ymd: string, now: Date = new Date()): boolean {
   return ymd > todayLocal(now)
 }
 
-export function clampToToday(ymd: string, now: Date = new Date()): string {
-  const today = todayLocal(now)
-  return ymd > today ? today : ymd
-}
-
 export function addDaysLocal(ymd: string, days: number): string {
   const date = parseLocalDate(ymd)
   date.setDate(date.getDate() + days)
   return todayLocal(date)
-}
-
-/** Inclusive start of a period ending today. */
-export function periodStartLocal(days: 7 | 30 | 90, now: Date = new Date()): string {
-  return addDaysLocal(todayLocal(now), -(days - 1))
 }
 
 export const MIN_ENTRY_DATE = '2020-01-01'

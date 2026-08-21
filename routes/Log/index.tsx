@@ -125,7 +125,11 @@ export default function Log() {
         setAnalysis(result)
         setScoredHash(hash)
         if (!result.food_detected) {
-          setDescription('')
+          // Only the photo path clears. `food_detected: false` means "no food in
+          // the IMAGE" (functional spec 6.1), and the fallback is to ask the user
+          // to type something -- so wiping text they just typed would delete the
+          // very thing being asked for.
+          if (nextDescription.trim().length === 0) setDescription('')
         } else if (nextDescription.trim().length === 0) {
           setDescription(result.description)
           setScoredHash(inputHash(result.description, nextHomemade))
@@ -307,7 +311,16 @@ export default function Log() {
     return (
       <>
         <ScreenHeader title="Registrar un plato" />
-        <ErrorState message={phase.message} onRetry={() => setPhase({ kind: 'review' })} />
+        {/* Retry the call that failed, rather than dropping the user back on the
+            review screen to find the button themselves. With nothing analyzable
+            yet there is nothing to retry, so just return to the form. */}
+        <ErrorState
+          message={phase.message}
+          onRetry={() => {
+            if (canAnalyze) void analyzeNow()
+            else setPhase({ kind: 'review' })
+          }}
+        />
         <button
           type="button"
           onClick={discard}

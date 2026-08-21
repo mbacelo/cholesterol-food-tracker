@@ -58,9 +58,9 @@ export const zAnalysis = z
     has_trans_fat: z.boolean(),
     /** Drives the +1 floor. */
     whole_plant_only: z.boolean(),
-    /** N9. Needed so our code can cap the two proxies at -1 combined. */
+    /** N8. Needed so our code can cap the two proxies at -1 combined. */
     proxy_ultra_processed: z.boolean(),
-    /** N10. Same. */
+    /** N9. Same. */
     proxy_unidentified_fat: z.boolean(),
 
     /** False when an image contains no identifiable food; drives the §6.1 fallback. */
@@ -106,8 +106,11 @@ export const ANALYSIS_JSON_SCHEMA = {
       type: 'string',
       description: 'One to three sentences naming the specific ingredients that drove the number.',
     },
-    positive_factors: { type: 'array', items: factorSchema },
-    negative_factors: { type: 'array', items: factorSchema },
+    // maxItems mirrors the `.max(4)` on the Zod side. Without it a five-item
+    // list is a validation throw -> retry -> possible 502, when the provider
+    // could simply have been told the limit.
+    positive_factors: { type: 'array', items: factorSchema, maxItems: 4 },
+    negative_factors: { type: 'array', items: factorSchema, maxItems: 4 },
     has_trans_fat: { type: 'boolean' },
     whole_plant_only: { type: 'boolean' },
     proxy_ultra_processed: { type: 'boolean' },

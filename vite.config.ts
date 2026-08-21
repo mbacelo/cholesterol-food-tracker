@@ -22,6 +22,9 @@ export default defineConfig({
     // Every screen is authenticated and unindexable, so there is nothing to
     // pre-render; a plain SPA bundle is the whole output.
     outDir: 'dist',
-    sourcemap: true,
+    // No production sourcemap: it would publish the full readable source of a
+    // private app. Nothing secret is in the bundle either way, so this is a
+    // preference -- flip it back when actively debugging a deployed build.
+    sourcemap: false,
   },
 })

@@ -101,12 +101,24 @@ export async function findUserByEmail(email: string): Promise<UserRow | null> {
 }
 
 /**
- * Deletes a user. `food_entries` cascades via its foreign key.
+ * Deletes a user and everything keyed to them. `food_entries` cascades via its
+ * foreign key.
  *
  * Deliberately does not name food_entries: this is called from the admin path,
  * and the admin surface's only contact with food data is a count and this
  * cascade.
+ *
+ * `ai_usage` does NOT cascade -- it is keyed by email rather than user_id, so it
+ * has no foreign key to hang a cascade on -- and it therefore has to be deleted
+ * explicitly. Without this the address of a deleted person survives a deletion
+ * the administrator confirmed as total.
+ *
+ * Usage rows go FIRST. The HTTP driver has no interactive transaction, so if the
+ * second statement fails the survivor should be the harmless one: a stale budget
+ * counter resets by itself at midnight, whereas a lingering email address is the
+ * bug this ordering exists to prevent.
  */
-export async function deleteUserById(userId: string): Promise<void> {
+export async function deleteUserById(userId: string, email: string): Promise<void> {
+  await db()`delete from ai_usage where email = ${email.trim().toLowerCase()}`
   await db()`delete from users where id = ${userId}`
 }

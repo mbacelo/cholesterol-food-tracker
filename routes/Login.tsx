@@ -31,10 +31,27 @@ declare global {
   }
 }
 
+/**
+ * Whether the Google Identity Services script has finished loading.
+ *
+ * It is tagged `async` in index.html, so it routinely resolves AFTER React has
+ * mounted. Sampling `window.google` once during an effect therefore loses a real
+ * race on a cold cache or a slow connection -- and losing it used to leave the
+ * button permanently unrendered, with no spinner and no error: the only way into
+ * the app, failing silently.
+ */
+type ScriptStatus = 'waiting' | 'ready' | 'failed'
+
+/** How long to wait before calling it: generous, since the cost of giving up early is a locked-out user. */
+const SCRIPT_TIMEOUT_MS = 15_000
+
 export default function Login() {
   const { state, signIn } = useSession()
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [script, setScript] = useState<ScriptStatus>(() =>
+    typeof window !== 'undefined' && window.google ? 'ready' : 'waiting',
+  )
   const buttonRef = useRef<HTMLDivElement>(null)
   const initialized = useRef(false)
 
@@ -55,8 +72,50 @@ export default function Login() {
     [signIn],
   )
 
+  // Wait for the script rather than sampling it once. Listening to the tag's own
+  // load event is the fast path; the interval covers the case where the script
+  // finished between this component mounting and the listener being attached.
   useEffect(() => {
-    if (initialized.current || !clientId || !buttonRef.current) return
+    if (script !== 'waiting') return
+
+    let settled = false
+    const ready = () => {
+      if (settled) return
+      settled = true
+      setScript('ready')
+    }
+
+    if (window.google) {
+      ready()
+      return
+    }
+
+    const tag = document.getElementById('gsi-client')
+    tag?.addEventListener('load', ready)
+    tag?.addEventListener('error', () => {
+      if (settled) return
+      settled = true
+      setScript('failed')
+    })
+
+    const poll = setInterval(() => {
+      if (window.google) ready()
+    }, 200)
+    const giveUp = setTimeout(() => {
+      if (settled) return
+      settled = true
+      setScript('failed')
+    }, SCRIPT_TIMEOUT_MS)
+
+    return () => {
+      clearInterval(poll)
+      clearTimeout(giveUp)
+      tag?.removeEventListener('load', ready)
+    }
+  }, [script])
+
+  useEffect(() => {
+    if (initialized.current || script !== 'ready' || !clientId || !buttonRef.current) return
     const google = window.google
     if (!google) return
     initialized.current = true
@@ -70,7 +129,7 @@ export default function Login() {
       width: 280,
       text: 'signin_with',
     })
-  }, [clientId, handleCredential])
+  }, [clientId, handleCredential, script])
 
   // An already-signed-in user opening the installed app must never see a login
   // screen.
@@ -90,8 +149,27 @@ export default function Login() {
       ) : null}
 
       <div className="mt-8">
-        {busy ? <Spinner label="Iniciando sesión" /> : <div ref={buttonRef} />}
+        {busy ? <Spinner label="Iniciando sesión" /> : null}
+        {!busy && clientId && script === 'waiting' ? <Spinner label="Cargando el inicio de sesión" /> : null}
+        {/* Kept mounted whenever the script is usable: renderButton needs the node. */}
+        <div ref={buttonRef} hidden={busy || script !== 'ready'} />
       </div>
+
+      {!busy && clientId && script === 'failed' ? (
+        <div role="alert" className="mt-4">
+          <p className="text-sm text-slate-700">
+            No se pudo cargar el inicio de sesión de Google. Revisa tu conexión e inténtalo de
+            nuevo.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="tap mt-3 rounded-lg bg-slate-900 px-6 font-semibold text-white"
+          >
+            Reintentar
+          </button>
+        </div>
+      ) : null}
 
       {!clientId ? (
         <p className="mt-6 text-sm text-red-700">

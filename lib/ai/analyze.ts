@@ -78,7 +78,21 @@ export async function analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
     if (hit) {
       const parsed = zAnalysis.safeParse(hit)
       if (parsed.success) {
-        return finish(parsed.data, true, provider.name, provider.model, 0, null, null)
+        // The CALLER's text, not the stored row's. The cache key normalizes case
+        // and whitespace, so a hit can legitimately come from a differently typed
+        // variant of the same dish -- and functional spec 6.3 requires the user's
+        // text back character for character. The model is never called on a hit,
+        // so this is the only place that rule can be enforced.
+        return finish(
+          parsed.data,
+          input.description,
+          true,
+          provider.name,
+          provider.model,
+          0,
+          null,
+          null,
+        )
       }
       // A stored row that no longer validates means the schema moved. Evict and
       // re-score rather than serving something the app can no longer read.
@@ -132,11 +146,20 @@ export async function analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
       model: provider.model,
       promptVersions: versions,
     })
-    await cache.set(writeKey, { ...analysis, description })
+    // The description is deliberately NOT stored. score_cache is global and not
+    // user-scoped -- the one table in an otherwise strictly isolated schema -- so
+    // keeping food text out of it is what stops it becoming a cross-user record of
+    // what people ate (db/migrations/001_init.sql, tech spec 3).
+    //
+    // Nothing needs it: the description is only ever read back on the text path,
+    // where the caller already has it, and the photo path writes this cache
+    // without ever reading it.
+    await cache.set(writeKey, { ...analysis, description: '' })
   }
 
   return finish(
-    { ...analysis, description },
+    analysis,
+    description,
     false,
     provider.name,
     result.model,
@@ -146,8 +169,14 @@ export async function analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
   )
 }
 
+/**
+ * `description` is passed in rather than read off `analysis` on purpose: the
+ * cached payload deliberately carries none (see the cache write above), and on a
+ * hit the answer must be the caller's own text.
+ */
 function finish(
   analysis: Analysis,
+  description: string,
   cached: boolean,
   providerName: string,
   model: string,
@@ -175,13 +204,13 @@ function finish(
     score: breakdown.score,
     modifierSum: breakdown.modifierSum,
     foodDetected: analysis.food_detected,
-    descriptionLength: analysis.description.length,
-    descriptionHash: cache.descriptionHash(analysis.description),
+    descriptionLength: description.length,
+    descriptionHash: cache.descriptionHash(description),
     contradiction: breakdown.contradiction,
   })
 
   return {
-    description: analysis.description,
+    description,
     score: breakdown.score,
     rationale: analysis.rationale,
     positiveFactors: analysis.positive_factors,

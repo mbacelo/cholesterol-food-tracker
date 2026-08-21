@@ -15,7 +15,10 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#ffffff" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <!-- iOS ignores an SVG here, so add-to-home-screen needs a real PNG.
+         Regenerate with `npm run generate:icons`. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Colesterol" />
@@ -24,8 +27,19 @@
       Google Identity Services. This is the client's only direct interaction with
       Google: it produces an ID token, which POST /api/session verifies
       server-side. Any client-side decode of that token is for display only.
+
+      The id is load-bearing: this script is async, so it routinely finishes
+      AFTER React has mounted and rendered the login screen. routes/Login.tsx
+      finds the tag by id and waits on its load event rather than sampling
+      window.google once -- without that, losing the race leaves the sign-in
+      button permanently unrendered, which is indistinguishable from a broken app.
     -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script
+      id="gsi-client"
+      src="https://accounts.google.com/gsi/client"
+      async
+      defer
+    ></script>
   </head>
   <body>
     <div id="root"></div>

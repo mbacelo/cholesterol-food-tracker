@@ -26,25 +26,13 @@ export function ScoreBadge({
   score,
   size = 'sm',
   showIcon = false,
-  pending = false,
 }: {
   score: number
   size?: keyof typeof SIZES
   showIcon?: boolean
-  pending?: boolean
 }) {
   const colors = scoreColor(score)
   const Icon = score > 0 ? TrendingUp : score < 0 ? TrendingDown : Minus
-
-  if (pending) {
-    return (
-      <span
-        aria-busy="true"
-        aria-label="calculando puntaje"
-        className={`inline-flex animate-pulse items-center justify-center rounded-xl bg-slate-200 font-bold ${SIZES[size]}`}
-      />
-    )
-  }
 
   return (
     <span

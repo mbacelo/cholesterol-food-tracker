@@ -157,12 +157,42 @@ export function ConfirmDialog({
     if (!open) return
     returnFocus.current = document.activeElement
     dialogRef.current?.focus()
+
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onCancel()
+      if (event.key === 'Escape') {
+        onCancel()
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      // Keep Tab inside the dialog. `aria-modal` tells a screen reader the rest
+      // of the page is inert; it does not stop the keyboard from walking into it,
+      // and every destructive action in the app is confirmed through here.
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
+      )
+      if (!focusable || focusable.length === 0) return
+      const first = focusable[0]!
+      const last = focusable[focusable.length - 1]!
+      const active = document.activeElement
+
+      if (event.shiftKey && (active === first || active === dialogRef.current)) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault()
+        first.focus()
+      }
     }
     document.addEventListener('keydown', onKey)
+
+    // Stop the page behind from scrolling under the sheet.
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
     return () => {
       document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = previousOverflow
       ;(returnFocus.current as HTMLElement | null)?.focus?.()
     }
   }, [open, onCancel])
@@ -236,15 +266,3 @@ export function ConfirmDialog({
   )
 }
 
-/** Single polite live region, for "Entry saved" and similar. */
-export function Toast({ message }: { message: string | null }) {
-  return (
-    <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-24 z-40 flex justify-center">
-      {message ? (
-        <span className="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-lg">
-          {message}
-        </span>
-      ) : null}
-    </div>
-  )
-}
